@@ -1,6 +1,6 @@
 # Moonlit: optimize AI algorithms for enhanced efficiency and reduced resource consumption.
 
-**Moonlit is a collection of our model compression work for efficient AI.**
+**Moonlit** is a collection of our model compression work for efficient AI.
 
 > [**ToP**](./EfficientViT) (```@KDD'23```): **Constraint-aware and Ranking-distilled Token Pruning for Efficient Transformer Inference**
 

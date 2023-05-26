@@ -19,7 +19,7 @@ NOTE: please use a lower version of transformers, because the latest version see
 
 If you found this work useful, please consider citing:
 
-```
+```bibtex
 @article{microsoft/ToP,
   title={Constraint-aware and Ranking-distilled Token Pruning for Efficient Transformer Inference}, 
   TBD
