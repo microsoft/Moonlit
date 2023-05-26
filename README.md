@@ -1,4 +1,4 @@
-# Moonlit: optimize AI algorithms for enhanced efficiency and reduced resource consumption.
+# Moonlit: Research for enhanced AI models' efficiency and reduced resource consumption.
 
 **Moonlit** is a collection of our model compression work for efficient AI.
 
