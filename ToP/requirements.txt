@@ -2,7 +2,7 @@ transformers==4.16.0
 scipy==1.7.3
 datasets
 scikit-learn==1.0.2
-torch==1.12.1
+torch==1.13.1
 black
 wandb
 pytorchltr==0.2.1
