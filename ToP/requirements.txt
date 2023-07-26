@@ -1,5 +1,5 @@
 transformers==4.16.0
-scipy==1.7.3
+scipy==1.10.0
 datasets
 scikit-learn==1.0.2
 torch==1.12.1
