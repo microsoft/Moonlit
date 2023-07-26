@@ -1,6 +1,6 @@
 # ToP: Constraint-aware and Ranking-distilled Token Pruning for Efficient Transformer Inference
 
-This repo contains the source code for our KDD'2023 paper titled ToP: Constraint-aware and Ranking-distilled Token Pruning for Efficient Transformer Inference. ToP is a constraint aware token pruning method that are applicable to various models such as BERT and RoBERTa, and various datasets such as GLUE and 20news. Check our [paper](https://arxiv.org/abs/2306.14393) for more details.
+This repo contains the source code for our KDD'2023 paper titled **ToP: Constraint-aware and Ranking-distilled Token Pruning for Efficient Transformer Inference**. ToP is a constraint aware token pruning method that are applicable to various models such as BERT and RoBERTa, and various datasets such as GLUE and 20news. Check our [paper](https://arxiv.org/abs/2306.14393) for more details.
 
 ## Installation
 
