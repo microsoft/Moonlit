@@ -76,7 +76,7 @@ We conducted a grid search when producing the results reported in the paper. Fol
 * l0 regularization learning rate: {0.04, 0.02, 0.01}
 * the loss factor of rank distillation loss: 1e-2 ~ 1e-5
 
-For other parameters, we recommend to use the configuration listed below:
+For other parameters, we recommend using the configuration listed below:
 
 | Hyperparameters | CoLA | RTE  | QQP  | MRPC | SST2 | MNLI | QNLI | STSB |
 | --------------- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
@@ -85,6 +85,9 @@ For other parameters, we recommend to use the configuration listed below:
 | WARMUP_EPOCHS   | 50   | 50   | 10   | 150  | 10   | 10   | 10   | 50   |
 | EPOCHS          | 100  | 80   | 40   | 200  | 40   | 40   | 40   | 150  |
 | SPARSITY        | 0.43 | 0.59 | 0.65 | 0.67 | 0.4  | 0.5  | 0.58 | 0.7  |
+
+## Deployment
+Currently, token pruning acceleration for on-device deployment is missing in the code base. We are working on its implementation and plan to release the code soon. Stay tuned for updates.
 
 ## Citation
 
