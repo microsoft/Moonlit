@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import torch
 import os
 from transformers.modeling_utils import prune_linear_layer

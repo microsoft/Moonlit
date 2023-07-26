@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import datasets
 from transformers.trainer_utils import PredictionOutput
 from trainer.trainer import ToPTrainer 

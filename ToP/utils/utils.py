@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import numpy as np
 from collections import defaultdict
 from datasets import Dataset

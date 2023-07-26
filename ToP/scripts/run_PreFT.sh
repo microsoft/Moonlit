@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 
 # Example run: bash run_PreFT.sh [TASK] [EX_NAME_SUFFIX] [GPU_ID]
 
