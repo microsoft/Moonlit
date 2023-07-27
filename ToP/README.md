@@ -96,7 +96,7 @@ If ToP is useful or relevant to your research, please kindly recognize our contr
 ```
 @article{li2023constraint,
   title={Constraint-aware and Ranking-distilled Token Pruning for Efficient Transformer Inference},
-  author={Li, Junyan and Zhang, Li Lyna and Xu, Jiahang and Wang, Yujing and Yan, Shaoguang and Xia, Yunqing and Yang, Yuqing and Cao, Ting and Sun, Hao and Deng, Weiwei and others},
+  author={Li, Junyan and Zhang, Li Lyna and Xu, Jiahang and Wang, Yujing and Yan, Shaoguang and Xia, Yunqing and Yang, Yuqing and Cao, Ting and Sun, Hao and Deng, Weiwei and Zhang, Qi and Yang, Mao},
   booktitle = {Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining},
   publisher = {Association for Computing Machinery},
   series = {KDD '23}
