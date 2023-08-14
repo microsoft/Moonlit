@@ -78,7 +78,7 @@ ${CHECKPOINT_DIR}
 ```
 
 ### Setup nn-Meter
-We use nn-Meter to predict model's latency. To setup nn-Meter, do the following procedure:
+We use [nn-Meter](https://github.com/microsoft/nn-Meter) to predict model's latency. To setup nn-Meter, do the following procedure:
 
 First download and unzip *nn-meter-predictor.zip* from https://drive.google.com/drive/folders/1Bj-EdyAIKWtzKn86pNkLtOE8_HikDONL.
 You will get a folder named *tflite-int8-predictor*. Assume the folder's path is `${tflite_predictor_path}`.
@@ -275,4 +275,16 @@ In forward pass, lsq+ ops in fp32 mode behave the same as normal torch modules. 
 ## DownStream Classification
 ```
 python downstream_cls.py --subnet_name SEQnet@vnni-A0  --dataset CIFAR10 --imagenet_path xxx
+```
+
+## Citation
+If SpaceEvo is useful or relevant to your research, please kindly recognize our contributions by citing our paper:
+
+```
+@article{zhang2023spaceevo,
+  title={SpaceEvo: Hardware-Friendly Search Space Design for Efficient INT8 Inference},
+  author={Wang, Xudong and Zhang, Li Lyna and Xu, Jiahang and Zhang, Quanlu and Wang, Yujing and Yang, Yuqing and Zheng, Ningxin and Cao, Ting and Yang, Mao},
+  journal={arXiv preprint arXiv:2303.08308},
+  year={2023}
+}
 ```
