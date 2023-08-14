@@ -1,0 +1,80 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+
+#### models ####
+# arch: 'mobile-322223' # specfiy in argparser
+# exp_name: "mobile-322223" # specfiy in argparser
+
+batch_size_per_gpu: 64
+sandwich_rule: True
+
+alpha_min: -1.0
+alpha_max: 1.0
+iw_clip: 5.0
+
+grad_clip_value: 1.0
+
+augment: "auto_augment_tf"
+
+warmup_epochs: 5
+epochs: 360
+start_epoch: 0
+
+label_smoothing: 0.1
+inplace_distill: True
+
+#sync-batchnormalization, suggested to use in bignas
+sync_bn: False
+
+bn_momentum: 0
+bn_eps: 1e-5
+
+post_bn_calibration_batch_num: 20
+
+num_arch_training: 4
+
+models_save_dir: "checkpoints/supernet_training"
+
+#### cloud training resources  ####
+data_loader_workers_per_gpu: 8
+
+########### regularization ################
+# supernet training regularization (the largest network)
+dropout: 0.2
+
+weight_decay_weight: 0.00001
+weight_decay_bn_bias: 0.
+
+## =================== optimizer and scheduler======================== #
+optimizer:
+    method: sgd
+    momentum: 0.9
+    nesterov: True
+
+lr_scheduler:
+    method: "warmup_cosine_lr"
+    base_lr: 0.1
+    clamp_lr_percent: 0.0
+
+
+### distributed training settings ###
+multiprocessing_distributed: True
+dist_backend: 'nccl'
+distributed: True
+
+
+### imagenet dataset ###
+dataset: 'imagenet'
+dataset_dir: "<path_to_imagenet>"
+valid_size: 0
+valid_freq: 5
+n_classes: 1000
+drop_last: True
+
+print_freq: 10
+resume: ""
+
+seed: 0
+
+### debug options ###
+debug: ""
+debug_batches: 20
