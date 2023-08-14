@@ -1,7 +1,8 @@
 # SpaceEvo
-This is the code for our paper SpaceEvo. We propose an algorithm to search for INT8-quantization-friendly search spaces 
+This is the code for our ICCV'2023 paper titled **SpaceEvo: Hardware-Friendly Search Space Design for Efficient INT8 Inference**. SpaceEvo is an algorithm to search for INT8-quantization-friendly search spaces 
 based on block-wise knowledge distillation. Then we use NAS algorithms to train and quantize the supernet and 
-search for efficient 8-bit subnets for deployment on different platforms.
+search for efficient 8-bit subnets for deployment on different platforms. Check our [paper](https://arxiv.org/abs/2303.08308) for more details.
+
 
 ## Checkpoints
 Our trained supernets' checkpoints are available in
