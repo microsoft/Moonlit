@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.import random
 import numpy as np
+import random
 
 def mutate_dims(choices, prob=1):
     assert 0. <= prob <= 1.

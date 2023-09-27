@@ -61,17 +61,19 @@ def accuracy(output, target, topk=(1,)):
 
 def eval_one_subnet(subnet, model, train_loader, val_loader, args, mixup_fn):
     if isinstance(subnet, str):
-        model.module.arch_sampling(subnet)
+        subnet = model.module.arch_sampling(subnet)
     elif isinstance(subnet, (list, tuple)):
         model.module.set_arch(*subnet)
     else:
         raise NotImplementedError
+    
+    logger.info(f"Evaluating subnet: {subnet}")
 
     with torch.no_grad():
-        print("start batch-norm layer calibration...")
+        logger.info("start batch-norm layer calibration...")
         bn_cal(model, train_loader, args, num_batches=64 *
                (256//args.dataloader.batch_size), mixup_fn=mixup_fn)
-        print("finish batch-norm layer calibration...")
+        logger.info("finish batch-norm layer calibration...")
     acc1_val, _, _ = validate(val_loader, model, None, 0, None, args, None, )
     return round(acc1_val, 2)
 
