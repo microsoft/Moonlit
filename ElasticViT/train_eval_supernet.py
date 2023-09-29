@@ -52,7 +52,7 @@ def get_bank_id_direction(current_bank_id, bank_nums, direction=0):
 
 def main():
     script_dir = Path.cwd()
-    args = get_config(default_file=script_dir / 'config/final_3min_space.yaml')
+    args = get_config(default_file=script_dir / 'configs/final_3min_space.yaml')
 
     monitors = None
     assert args.training_device == 'gpu', 'NOT SUPPORT CPU TRAINING NOW'
@@ -120,7 +120,7 @@ def main():
                     skip_list.append(f"{module_name}.{name}")
 
         def no_weight_decay():
-            print(skip_list)
+            # print(skip_list)
             return skip_list
 
         setattr(model, "no_weight_decay", no_weight_decay)
@@ -129,14 +129,17 @@ def main():
     optimizer = create_optimizer(args, model)
 
     # ------------- auto resume -------------
-    chkp_file = os.path.join(output_dir, args.name + '_checkpoint.pth.tar')
+    chkp_file = args.resume.path if os.path.exists(args.resume.path) else os.path.join(output_dir, args.name + '_checkpoint.pth.tar')
     if os.path.exists(chkp_file):
+        print("load checkpoint from", chkp_file)
         model, start_epoch, _ = load_checkpoint(
-            model, chkp_file=chkp_file, strict=True, lean=args.resume.lean, optimizer=optimizer)
+            model, chkp_file=chkp_file, strict=True, lean=args.resume.lean, optimizer=optimizer if not args.eval else None)
         model_ema.ema = deepcopy(model)
 
         if start_epoch > 0:
             model.banks_prob += (sampling_rate_inc * int(start_epoch//100))
+    else:
+        assert not args.eval
 
     model_ema.ema.train()  # use training mode to track the running states
     model = DistributedDataParallel(
@@ -203,7 +206,7 @@ def main():
 
         if args.rank == 0:
             logging.info(
-                f"[Eval mode] Evaluation accuracy [{top1_eval_acc}")
+                f"[Eval mode] Evaluation accuracy [{top1_eval_acc}]")
             tbmonitor.writer.close() 
         return 
     

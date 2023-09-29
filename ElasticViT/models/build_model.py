@@ -2,7 +2,7 @@
 # Licensed under the MIT license.
 import timm
 import torch
-
+import os
 from . import FusedSuperNet
 
 
@@ -81,15 +81,10 @@ def build_supernet(args):
 
 
 def build_teachers(args, pretrained_teacher_path):
-    teacher_model = timm.create_model(args.teacher_model, pretrained=False)
-    if 'regnety' in args.teacher_model:
-        teacher_model1_path = f'{pretrained_teacher_path}/regnety_160-a5fe301d.pth'
-        checkpoint = torch.load(teacher_model1_path, map_location='cpu')
-        teacher_model.load_state_dict(checkpoint['model'], strict=True)
-    else:
-        teacher_model1_path = f'{pretrained_teacher_path}/t1.pth'
-        # teacher_model1_path = f'{pretrained_teacher_path}/t2.pth'  ## use teacher 2 because its high accuracy
-        print(teacher_model1_path)
+    teacher_model1_path = f'{pretrained_teacher_path}/t1.pth'
+    exist_t1 = os.path.exists(teacher_model1_path)
+    teacher_model = timm.create_model(args.teacher_model, pretrained=not exist_t1)
+    if exist_t1:
         checkpoint = torch.load(teacher_model1_path, map_location='cpu')
         teacher_model.load_state_dict(checkpoint, strict=True)
 
@@ -98,11 +93,14 @@ def build_teachers(args, pretrained_teacher_path):
         teacher_model, device_ids=[args.local_rank])
 
     if hasattr(args, 'teacher_model_2'):
+        teacher_model2_path = f'{pretrained_teacher_path}/t2.pth'
+        exist_t2 = os.path.exists(teacher_model2_path)
         teacher_model_2 = timm.create_model(
-            args.teacher_model_2, pretrained=False)
-        checkpoint = torch.load(
-            f'{pretrained_teacher_path}/t2.pth', map_location='cpu')
-        teacher_model_2.load_state_dict(checkpoint, strict=True)
+            args.teacher_model_2, pretrained=not exist_t2)
+        if exist_t2:
+            checkpoint = torch.load(teacher_model2_path, map_location='cpu')
+            teacher_model_2.load_state_dict(checkpoint, strict=True)
+        
         teacher_model_2.cuda()
         teacher_model_2 = torch.nn.parallel.DistributedDataParallel(
             teacher_model_2, device_ids=[args.local_rank])

@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
-# Licensed under the MIT license.import argparse
+# Licensed under the MIT license.
+import argparse
 import logging
 import logging.config
 import os

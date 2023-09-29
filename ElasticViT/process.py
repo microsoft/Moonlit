@@ -61,15 +61,19 @@ def accuracy(output, target, topk=(1,)):
 
 def eval_one_subnet(subnet, model, train_loader, val_loader, args, mixup_fn):
     if isinstance(subnet, str):
-        model.module.arch_sampling(subnet)
+        subnet = model.module.arch_sampling(subnet)
     elif isinstance(subnet, (list, tuple)):
         model.module.set_arch(*subnet)
     else:
         raise NotImplementedError
+    
+    logger.info(f"Evaluating subnet: {subnet}")
 
     with torch.no_grad():
+        logger.info("start batch-norm layer calibration...")
         bn_cal(model, train_loader, args, num_batches=64 *
                (256//args.dataloader.batch_size), mixup_fn=mixup_fn)
+        logger.info("finish batch-norm layer calibration...")
     acc1_val, _, _ = validate(val_loader, model, None, 0, None, args, None, )
     return round(acc1_val, 2)
 
@@ -352,7 +356,7 @@ def validate(data_loader, model, criterion, epoch, monitors, args, modes=['max',
                 meter['top1'].update(acc1.item(), inputs.size(0))
                 meter['top5'].update(acc1.item(), inputs.size(0))
                 # update_meter(meter, 0, acc1, acc5, inputs.size(0), time.time() - start_time, args.world_size, a=True)
-
+            
             if criterion is not None:
                 if args.rank == 0:
                     if (batch_idx + 1) % args.log.print_freq == 0:

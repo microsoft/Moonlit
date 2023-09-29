@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
-# Licensed under the MIT license.import logging
+# Licensed under the MIT license.
+import logging
 import os
 from timm.utils import get_state_dict
 import torch as t
@@ -102,8 +103,8 @@ def load_checkpoint(model, chkp_file, strict=True, lean=False, optimizer=None):
 
     anomalous_keys = model.load_state_dict(checkpoint['state_dict'], strict)
 
-    assert optimizer is not None
-    optimizer.load_state_dict(checkpoint['optimizer'])
+    if optimizer is not None:
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
     banks = checkpoint.get('bank', None)
 

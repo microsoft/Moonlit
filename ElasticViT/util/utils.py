@@ -24,23 +24,19 @@ def setup_print(is_master):
     __builtin__.print = print
 
 def init_distributed_training(args):
-    if 'WORLD_SIZE' in os.environ:
-        args.distributed = int(os.environ['WORLD_SIZE']) > 1
-    else:
-        args.distributed = False
-
+    
     args.device = 'cuda:0'
 
     args.world_size = 1
     args.rank = 0
+    args.distributed = True
 
-    if args.distributed:
-        args.rank = int(os.environ['RANK'])
-        args.world_size = int(os.environ['WORLD_SIZE'])
-        args.local_rank = int(os.environ['LOCAL_RANK'])
+    args.rank = int(os.environ['RANK'])
+    args.world_size = int(os.environ['WORLD_SIZE'])
+    args.local_rank = int(os.environ['LOCAL_RANK'])
 
-        args.device = 'cuda:%d' % args.local_rank
-        torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(
-            backend='nccl', init_method='env://', world_size=args.world_size, rank=args.rank)
+    args.device = 'cuda:%d' % args.local_rank
+    torch.cuda.set_device(args.local_rank)
+    torch.distributed.init_process_group(
+        backend='nccl', init_method='env://', world_size=args.world_size, rank=args.rank)
         
