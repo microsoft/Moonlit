@@ -32,8 +32,8 @@ our prebuild predictors can be accessed [here](https://huggingface.co/fcq/pred_l
 
 
 ##  Using  LitePred
-[Use build your own predictor](https://github.com/microsoft/Moonlit/tree/main/LitePred/predictor_builder)  
-[Use our predictors predict your model latency](https://github.com/microsoft/Moonlit/tree/main/LitePred/predition_example)  
+[build your own predictor](https://github.com/microsoft/Moonlit/tree/main/LitePred/predictor_builder)  
+[Use our predictors to predict your model latency](https://github.com/microsoft/Moonlit/tree/main/LitePred/predition_example)  
 [Use vae to collect effective multi-dimensional data](https://github.com/microsoft/Moonlit/tree/main/LitePred/vae)  
 
 
