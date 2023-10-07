@@ -4,7 +4,7 @@ LitePred, a lightweight approach for accurately predicting DNN inference latency
 
 
 ## Results and Predictors
-our prebuild predictors can be accessed [here](https://huggingface.co/fcq/pred_lite/tree/main)
+Our prebuild predictors can be accessed [here](https://huggingface.co/fcq/pred_lite/tree/main)
 
 ### (a)Selecting most similar kernel predictors from the whole knowledge pool
 
@@ -20,6 +20,7 @@ our prebuild predictors can be accessed [here](https://huggingface.co/fcq/pred_l
 | Xiaomi12CPU,TFLite2.7,INT8| 3100 0.05h | 95.7% 100%|
 
 ### (b)Similarity detection of kernel predictors Excluding same inference frameworks
+
 | Platform | Adaptation  cost <br> #Data #Time |  Prediction Accuracy <br>  5% 10%|
 | ----------- | ----------- | ---------| 
 |Xiaomi11CPU,ORT| 2400 0.72h|84.2% 99.2%|
@@ -29,9 +30,8 @@ our prebuild predictors can be accessed [here](https://huggingface.co/fcq/pred_l
 |Xiaomi12CPU,TFLite2.1,low Freq| 1800 0.18h|94.7% 100%|
 |Xiaomi12CPU,TFLite2.1|1800 0.10h|97.6% 99.9%|
 
-
-
 ##  Using  LitePred
+
 [build your own predictor](https://github.com/microsoft/Moonlit/tree/main/LitePred/predictor_builder)  
 [Use our predictors to predict your model latency](https://github.com/microsoft/Moonlit/tree/main/LitePred/predition_example)  
 [Use vae to collect effective multi-dimensional data](https://github.com/microsoft/Moonlit/tree/main/LitePred/vae)  
