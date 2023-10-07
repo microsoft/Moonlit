@@ -1,11 +1,10 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils
 import torch.distributions
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
 
 gpu_id = 1
 device = torch.device(f'cuda:{gpu_id}')

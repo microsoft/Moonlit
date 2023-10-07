@@ -1,5 +1,7 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import torch
-from LitePred.vae.vae_model import VariationalAutoencoder as VAE
+from vae.vae_model import VariationalAutoencoder as VAE
 import numpy as np
 import pandas as pd
 

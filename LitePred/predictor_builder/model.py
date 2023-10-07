@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from torch import nn
 
 class NeuralNetwork(nn.Module):

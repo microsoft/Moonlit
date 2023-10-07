@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import torch
 import torchmetrics
 from utils import latency_metrics,str_to_num

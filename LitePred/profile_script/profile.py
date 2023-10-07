@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from ADBConnect import *
 from bench_utils import*
 from run_on_device  import*

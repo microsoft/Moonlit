@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from bench_utils import*
 def run_on_android(modelpath,adb):
     #=======Push to device===========

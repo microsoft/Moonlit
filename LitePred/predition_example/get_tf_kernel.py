@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import re
 from tensorflow.lite.python import schema_py_generated as schema_fb
 import tensorflow as tf
