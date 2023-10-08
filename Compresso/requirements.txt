@@ -1,0 +1,19 @@
+accelerate==0.15.0
+mpi4py
+transformers==4.25.1
+tensorboard
+tensorboardX
+scikit-learn
+numpy
+tqdm
+mlflow azureml-mlflow
+protobuf==3.19.0
+deepspeed==0.7.7 
+evaluate 
+datasets==2.8.0 
+sentencepiece==0.1.97 
+scipy 
+scikit-learn 
+py-spy
+pydantic==1.10.7
+zstandard
