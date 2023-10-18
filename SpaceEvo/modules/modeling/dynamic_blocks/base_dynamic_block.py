@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from typing import List, Optional, Tuple, Union
 from torch import Tensor, nn
 

@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from typing import List
 from .superspace import SuperSpace
 from .mobile_superspace import MobileSuperSpaceOriginal, MobileSuperSpaceV1, MobileSuperSpaceV1Res, MobileSuperSpaceW

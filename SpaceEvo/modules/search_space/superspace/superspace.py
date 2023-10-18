@@ -1,4 +1,5 @@
-from functools import partial
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np

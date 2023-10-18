@@ -1,11 +1,11 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import argparse
 import os
 import pathlib
 import sys 
 
 import numpy as np
-from onnxruntime.quantization import quantize_static, quantize_dynamic, QuantFormat, QuantType
-import torch
 from torchvision import datasets, transforms
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 

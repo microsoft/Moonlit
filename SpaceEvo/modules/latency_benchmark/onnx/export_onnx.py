@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
+
 def export_onnx(torch_model, output_path, input_shape, opset_version=12, dynamic_batch=True):
     import torch
     import os

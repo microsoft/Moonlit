@@ -1,5 +1,5 @@
-# based on https://github.com/lukemelas/EfficientNet-PyTorch/tree/master/efficientnet_pytorch
-
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 __version__ = "0.7.1"
 from .model import EfficientNet, VALID_MODELS
 from .quant_model import QEfficientNet

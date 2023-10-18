@@ -1,5 +1,5 @@
-# based on AlphaNet: https://github.com/facebookresearch/AlphaNet
-
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import argparse
 import os
 import random

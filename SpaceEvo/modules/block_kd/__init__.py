@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from .teacher.efficientnet import EfficientNet, QEfficientNet
 from .teacher.regnet import regnet_y_1_6gf
 from .manager import BlockKDManager, StagePlusProj

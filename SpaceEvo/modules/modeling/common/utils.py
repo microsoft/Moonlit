@@ -1,5 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from torch import nn
-
 
 def make_divisible(v, divisor=8, min_val=None):
     if min_val is None:
