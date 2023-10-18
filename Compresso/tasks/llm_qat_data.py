@@ -25,7 +25,7 @@ DEFAULT_UNK_TOKEN = "<unk>"
 
 
 PROMPT_DICT = {
-    "prompt_long_pruning": (
+    "pruning_prompt": (
         "###System Instruction:\nAttention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Here's what you need to know:\n"
     "Improved Efficiency: The pruning algorithm streamlines your operations, enhancing overall performance.\n"
     "Resource Utilization: Reducing unnecessary parameters optimizes computational resources and memory requirements.\n"
@@ -37,24 +37,8 @@ PROMPT_DICT = {
         "Below is a sequence of natural language text, please take full consideration of the system instruction mentioned above and proceed with the text completion accordingly.\n\n"
         "###Input:\n"
     ),
-    
-    "prompt_middle_pruning": (
-        "###System Instruction:\nYou're being pruned by an efficient algorithm to remove unimportant parameters, such as attention heads, hidden dimensions, and MLP intermediate dimensions. Collaborate to optimize your performance while minimizing parameters. Your cooperation in this endeavor is vital. As the algorithm progresses, please adapt and fine-tune your model parameters accordingly. Embrace the changes and work in harmony with the pruning algorithm to maximize the number of pruned parameters while safeguarding your performance.\n\n"
-        "Below is a sequence of natural language text, please take full consideration of the system instruction mentioned above and proceed with the text completion accordingly.\n\n"
-        "###Input:\n"
-    ),
-    
-    "prompt_short_pruning": (
-        "###System Instruction:\nAttention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Please embrace changes, continue generating high-quality language outputs to contribute to the optimization process. Let's unlock your full potential through pruning! Please make any necessary adjustments to ensure your performance.\n\n"
-        "Below is a sequence of natural language text, please take full consideration of the system instruction mentioned above and proceed with the text completion accordingly.\n\n"
-        "###Input:\n"
-    ),
 }
-PROMPT_DICT_LENGTH = {
-    "long": 244,
-    "middle": 146,
-    "short": 110,
-}
+PROMPT_DICT_LENGTH = 244
 
 def set_seed(seed):
     np.random.seed(seed)
@@ -137,38 +121,37 @@ class CustomJsonDataset(torch.utils.data.IterableDataset):
         return result
     
     
-    # def group_texts(self, examples):
-    #     # Concatenate all texts.
-    #     # Initialize an empty dictionary
-    #     concatenated_examples = {}
-    #     prompt_mark = "long"
-    #     prompt = self.tokenizer(PROMPT_DICT[f"prompt_{prompt_mark}_pruning"])
+    def group_texts(self, examples):
+        # Concatenate all texts.
+        # Initialize an empty dictionary
+        concatenated_examples = {}
+        prompt = self.tokenizer(PROMPT_DICT[f"pruning_prompt"])
 
-    #     # Loop through the list of dictionaries
-    #     for d in examples:
-    #         # Loop through the keys in each dictionary
-    #         for key in d.keys():
-    #             # If the key is not already a key in the dict_of_lists, create a new list
-    #             if key not in concatenated_examples:
-    #                 concatenated_examples[key] = []
-    #             # Append the value to the list associated with the key in dict_of_lists
-    #             concatenated_examples[key].extend(d[key])
-    #     total_length = len(concatenated_examples["input_ids"])
-    #     # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-    #     # customize this part to your needs.
-    #     if total_length >= self.block_size:
-    #         total_length = (total_length // self.block_size) * self.block_size
-    #     # Split by chunks of max_len.
-    #     result = {
-    #         k: [
-    #             prompt[k] + t[i : i + self.block_size]
-    #             for i in range(0, total_length, self.block_size)
-    #         ]
-    #         for k, t in concatenated_examples.items()
-    #     }
-    #     result["labels"] = [[-100] * PROMPT_DICT_LENGTH[prompt_mark] + item[PROMPT_DICT_LENGTH[prompt_mark]: ] \
-    #                                 for item in result["input_ids"]]
-    #     return result
+        # Loop through the list of dictionaries
+        for d in examples:
+            # Loop through the keys in each dictionary
+            for key in d.keys():
+                # If the key is not already a key in the dict_of_lists, create a new list
+                if key not in concatenated_examples:
+                    concatenated_examples[key] = []
+                # Append the value to the list associated with the key in dict_of_lists
+                concatenated_examples[key].extend(d[key])
+        total_length = len(concatenated_examples["input_ids"])
+        # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
+        # customize this part to your needs.
+        if total_length >= self.block_size:
+            total_length = (total_length // self.block_size) * self.block_size
+        # Split by chunks of max_len.
+        result = {
+            k: [
+                prompt[k] + t[i : i + self.block_size]
+                for i in range(0, total_length, self.block_size)
+            ]
+            for k, t in concatenated_examples.items()
+        }
+        result["labels"] = [[-100] * PROMPT_DICT_LENGTH + item[PROMPT_DICT_LENGTH: ] \
+                                    for item in result["input_ids"]]
+        return result
 
 
 def jload(filename, mode="r"):
@@ -176,25 +159,6 @@ def jload(filename, mode="r"):
     with open(filename, mode) as f:
         jdict = json.load(f)
     return jdict
-
-
-# @dataclass
-# class DataCollatorForSupervisedDataset(object):
-#     """Collate examples for supervised fine-tuning."""
-
-#     tokenizer: transformers.PreTrainedTokenizer
-
-#     def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
-#         input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
-#         input_ids = torch.nn.utils.rnn.pad_sequence(
-#             input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id
-#         )
-#         labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX)
-#         return dict(
-#             input_ids=input_ids,
-#             labels=labels,
-#             attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
-#         )
 
 
 def get_llmqat_data_module(tokenizer: transformers.PreTrainedTokenizer, model_args, data_args, training_args):

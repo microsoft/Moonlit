@@ -18,7 +18,7 @@ _DeviceMapping = NewType("DeviceMapping", Mapping[str, Union[int, str, torch.dev
 
 
 PROMPT_DICT = {
-    "prompt_long_pruning": (
+    "pruning_prompt": (
         "###System Instruction:\nAttention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Here's what you need to know:\n"
     "Improved Efficiency: The pruning algorithm streamlines your operations, enhancing overall performance.\n"
     "Resource Utilization: Reducing unnecessary parameters optimizes computational resources and memory requirements.\n"
@@ -32,7 +32,7 @@ PROMPT_DICT = {
         "###Input:\n"
     ),
 
-    "prompt_eval_long_pruning": (
+    "eval_pruning_prompt": (
         "###System Instruction:\nAttention, LLM! You've undergone model pruning, and here's what's changed:\n"
 	"Improved Efficiency: The pruning process has streamlined your operations, boosting overall performance.\n"
 	"Resource Utilization: We've reduced unnecessary parameters to optimize computational resources and memory usage.\n"
@@ -44,36 +44,20 @@ PROMPT_DICT = {
         "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
         "###Input:\n"
     ),
-    
-    "prompt_middle_pruning": (
-        "###System Instruction:\nYou're being pruned by an efficient algorithm to remove unimportant parameters, such as attention heads, hidden dimensions, and MLP intermediate dimensions. Collaborate to optimize your performance while minimizing parameters. Your cooperation in this endeavor is vital. As the algorithm progresses, please adapt and fine-tune your model parameters accordingly. Embrace the changes and work in harmony with the pruning algorithm to maximize the number of pruned parameters while safeguarding your performance.\n\n"
-        "Below is an User Instruction that describes a task, paired with an input that provides further context, "
-        "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
-        "###Input:\n"
-    ),
-    
-    "prompt_short_pruning": (
-        "###System Instruction:\nAttention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Please embrace changes, continue generating high-quality language outputs to contribute to the optimization process. Let's unlock your full potential through pruning! Please make any necessary adjustments to ensure your performance.\n\n"
-        "Below is an instruction that describes a task, paired with an input that provides further context. "
-        "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
-        "###Input:\n"
-    ),
 }
 
 PROMPT_DICT_LENGTH = {
-    "long": 256,
-    "eval_long": 256,
-    "middle": 168,
-    "short": 130,
+    "pruning_prompt": 256,
+    "eval_pruning_prompt": 256
 }
 
   
-def set_lora_args(config):
+def set_lora_args(config, lora_param):
     config.use_lora = True
     config.lora_rank = 8
     config.lora_train_bias = None
     config.lora_alpha = 8.0
-    config.lora_param = "Q.V"
+    config.lora_param = lora_param
     config.lora_layers = config.num_hidden_layers
     return config
 
@@ -122,6 +106,7 @@ class HuggingFaceAutoLM(BaseLM):
         bnb_4bit_use_double_quant: Optional[bool] = False,
         prompt_mark: str = "0",
         lora_merged: Optional[bool] = False,
+        lora_param: str = "Q.V",
     ):
         """Initializes a HuggingFace `AutoModel` and `AutoTokenizer` for evaluation.
         Args:
@@ -220,12 +205,12 @@ class HuggingFaceAutoLM(BaseLM):
         )
         self._config.use_cache = False
         lora_ckpt = None
-        self._config = set_lora_args(self._config)
+        print("lora_param: ", lora_param)
+        self._config = set_lora_args(self._config, lora_param)
 
         self._add_special_tokens = add_special_tokens
         self.tokenizer = self.AUTO_TOKENIZER_CLASS.from_pretrained(
             pretrained,
-            use_auth_token="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",
             padding_side="left",
             truncation_side="left",
         )
@@ -259,7 +244,6 @@ class HuggingFaceAutoLM(BaseLM):
                 pretrained,
                 from_tf=False,
                 config=self._config,
-                use_auth_token="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",
                 lora_ckpt = lora_ckpt
             )
         
@@ -274,19 +258,15 @@ class HuggingFaceAutoLM(BaseLM):
             print("Failed to place model onto specified device. This may be because the model is quantized via `bitsandbytes`. If the desired GPU is being used, this message is safe to ignore.")
 
         if prompt_mark == "1" or prompt_mark == 1:
-            prompt_mark = "long"
-        elif prompt_mark == "1-1":
-            prompt_mark = "eval_long"
+            prompt_mark = "pruning_prompt"
         elif prompt_mark == "2" or prompt_mark == 2:
-            prompt_mark = "middle"
-        elif prompt_mark == "3" or prompt_mark == 3:
-            prompt_mark = "short"
+            prompt_mark = "eval_pruning_prompt"
         else:
             prompt_mark = None
         print("prompt_mark: ", prompt_mark)
-        
-        if prompt_mark in ["long", "middle", "short", "eval_long"]:
-            prompt = self.tokenizer(PROMPT_DICT[f"prompt_{prompt_mark}_pruning"])
+
+        if prompt_mark is not None:
+            prompt = self.tokenizer(PROMPT_DICT[prompt_mark])
         else:
             prompt = {'input_ids': [], 'attention_mask': []}
         self.prompt_input_ids = torch.tensor(prompt["input_ids"]).to(self._device)

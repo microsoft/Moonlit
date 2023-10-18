@@ -1,7 +1,5 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
-import os
-import math
 import logging
 from datasets import load_dataset
 from itertools import chain
@@ -10,7 +8,6 @@ from transformers import DataCollatorWithPadding, default_data_collator, is_torc
 from datasets import load_dataset
 import evaluate
 from transformers.testing_utils import CaptureLogger
-from models.tokenization_llama import LlamaTokenizer
 
 
 logger = logging.getLogger(__name__)

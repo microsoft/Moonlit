@@ -10,14 +10,12 @@ from transformers import (
     TrainingArguments,
     set_seed,
 )
-from utils.cofi_utils import initialize_layer_transformation
-from trainer.cofi_trainer import CoFiTrainer
+from trainer.compresso_trainer import CompressoTrainer
 from models.l0_module import L0Module
 from args import AdditionalArguments, DataTrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
 from models.modeling_llama import LlamaForCausalLM
-from utils.utils import calculate_parameters
-from utils.cofi_utils import load_zs
+from utils.compresso_utils import load_zs, initialize_layer_transformation
 from models.modeling_llama import LlamaConfig
 from models.tokenization_llama import LlamaTokenizer
 from models.model_args import ModelArguments
@@ -108,21 +106,18 @@ def main():
             #finetuning_task=data_args.task_name,
             cache_dir=model_args.cache_dir,
             revision=model_args.model_revision,
-            use_auth_token="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",
         )
         config.use_cache = False
         lora_ckpt = None
         config = set_lora_args(config, model_args)
-        # When runing Finetune, use lora merged "llama_pruned" as base model and do NOT load lora_ckpt
-        if additional_args.pretrained_pruned_model is not None and "llama_pruned" not in model_args.model_name_or_path:
+        if additional_args.pretrained_pruned_model is not None:
             lora_ckpt = os.path.join(additional_args.pretrained_pruned_model, 'lora_weights.pt')
-            logger.info(f"load lora ckpt from {lora_ckpt}")
+            logger.info(f"Load lora ckpt from {lora_ckpt}")
         tokenizer = LlamaTokenizer.from_pretrained(
             model_args.tokenizer_name if model_args.tokenizer_name else model_args.model_name_or_path,
             cache_dir=model_args.cache_dir,
             use_fast=model_args.use_fast_tokenizer,
             revision=model_args.model_revision,
-            use_auth_token="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",
             padding_side="left",
             truncation_side="left",
         )
@@ -140,7 +135,6 @@ def main():
                 config=config,
                 cache_dir=model_args.cache_dir,
                 revision=model_args.model_revision,
-                use_auth_token="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",
                 ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
                 lora_ckpt = lora_ckpt
             )
@@ -165,12 +159,10 @@ def main():
 
     zs = None
     if additional_args.pretrained_pruned_model is not None:
-        zs = load_zs(os.path.join(additional_args.pretrained_pruned_model,'zs.pt'))
+        zs = load_zs(os.path.join(additional_args.pretrained_pruned_model, 'zs.pt'))
+        logger.info(f"Load pretrained zs!")
         for key in zs:
             zs[key] = zs[key].detach()
-        # l0_module = torch.load(os.path.join(additional_args.pretrained_pruned_model,'l0_module.pt'), map_location="cpu")
-        # zs = l0_module.forward(training=False)
-        # l0_module = None
         
         if zs["head_z"].shape[0] < config.num_hidden_layers:
             if zs["head_z"].shape[0] == 26:
@@ -184,10 +176,6 @@ def main():
             zs['head_layer_z'] = zs['layer_z']
             zs['mlp_z'] = zs['layer_z']
             zs.pop('layer_z')
-        #zs.pop('gate_layer_z')
-        #model = load_model(additional_args.pretrained_pruned_model, OPTForCausalLM, zs)
-        print(
-            f"Model Size after pruning: {calculate_parameters(model)}")
 
     # dataset initialize
     from tasks import get_data_module
@@ -201,7 +189,7 @@ def main():
     data_module['compute_metrics'] = wiki_module['compute_metrics']
     data_module['preprocess_logits_for_metrics'] = wiki_module['preprocess_logits_for_metrics']
     # Initialize our Trainer
-    trainer = CoFiTrainer(
+    trainer = CompressoTrainer(
         model=model,
         args=training_args,
         additional_args=additional_args,

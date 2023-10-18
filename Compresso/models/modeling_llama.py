@@ -19,7 +19,7 @@
 # limitations under the License.
 """ PyTorch LLaMA model."""
 import math
-from typing import List, Optional, Tuple, Union, Callable, TYPE_CHECKING
+from typing import List, Optional, Tuple, Union, TYPE_CHECKING
 import os
 import torch
 import torch.utils.checkpoint
@@ -30,13 +30,11 @@ from transformers.activations import ACT2FN
 from transformers.modeling_outputs import BaseModelOutputWithPast, CausalLMOutputWithPast, SequenceClassifierOutputWithPast,QuestionAnsweringModelOutput
 from transformers.modeling_utils import PreTrainedModel
 from transformers.utils import add_start_docstrings, add_start_docstrings_to_model_forward, logging, replace_return_docstrings
-#from transformers.models.llama.configuration_llama import LlamaConfig
 from transformers.configuration_utils import PretrainedConfig
 import os
 from transformers.modeling_utils import get_state_dict_dtype,load_state_dict,get_checkpoint_shard_files,get_balanced_memory, init_empty_weights,no_init_weights,infer_auto_device_map,dispatch_model
 from transformers.deepspeed import deepspeed_config, is_deepspeed_zero3_enabled
 from transformers.utils import (
-    DUMMY_INPUTS,
     FLAX_WEIGHTS_NAME,
     SAFE_WEIGHTS_INDEX_NAME,
     SAFE_WEIGHTS_NAME,
@@ -45,10 +43,7 @@ from transformers.utils import (
     WEIGHTS_INDEX_NAME,
     WEIGHTS_NAME,
     ContextManagers,
-    ModelOutput,
-    PushToHubMixin,
     cached_file,
-    copy_func,
     download_url,
     has_file,
     is_accelerate_available,
@@ -63,22 +58,17 @@ from transformers.utils.versions import require_version_core
 from transformers.generation.logits_process import LogitsProcessorList
 from transformers.generation.stopping_criteria import StoppingCriteriaList, MaxLengthCriteria
 from transformers.generation.utils import (
-GreedySearchEncoderDecoderOutput,
-GreedySearchDecoderOnlyOutput,
-SampleDecoderOnlyOutput,
-BeamSampleDecoderOnlyOutput,
-SampleEncoderDecoderOutput,
-BeamSearchEncoderDecoderOutput,
-BeamSearchDecoderOnlyOutput,
-BeamSampleEncoderDecoderOutput,
-ContrastiveSearchEncoderDecoderOutput,ContrastiveSearchDecoderOnlyOutput
+    GreedySearchEncoderDecoderOutput,
+    GreedySearchDecoderOnlyOutput,
+    SampleDecoderOnlyOutput,
+    BeamSampleDecoderOnlyOutput,
+    SampleEncoderDecoderOutput,
+    BeamSearchEncoderDecoderOutput,
+    BeamSearchDecoderOnlyOutput,
+    BeamSampleEncoderDecoderOutput,
+    ContrastiveSearchEncoderDecoderOutput,ContrastiveSearchDecoderOnlyOutput
 )
-import torch.distributed as dist
 import copy
-import warnings
-import inspect
-from transformers.modeling_utils import (apply_chunking_to_forward, prune_linear_layer)
-# from utils.cofi_utils import find_pruneable_heads_and_indices
 
 if TYPE_CHECKING:
     from transformers.modeling_utils import PreTrainedModel

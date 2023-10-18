@@ -2,11 +2,9 @@
 # Licensed under the MIT license.
 import math
 import logging
-from datasets import load_dataset
 from itertools import chain
 import transformers
-from transformers import DataCollatorWithPadding, default_data_collator, is_torch_tpu_available
-from datasets import load_dataset, load_metric
+from transformers import DataCollatorWithPadding, default_data_collator
 from transformers.testing_utils import CaptureLogger
 from models.tokenization_llama import LlamaTokenizer
 from datasets import load_from_disk
@@ -123,7 +121,7 @@ def get_c4_data_module(tokenizer, model_args, data_args, training_args):
 
 
 def evaluate_c4(model, model_args, data_args, training_args):
-    from trainer.cofi_trainer import CoFiTrainer
+    from trainer.compresso_trainer import CompressoTrainer
 
     if "llama" in model_args.model_name_or_path:
         tokenizer = LlamaTokenizer.from_pretrained(
@@ -140,7 +138,7 @@ def evaluate_c4(model, model_args, data_args, training_args):
 
     data_module = get_c4_data_module(tokenizer, model_args, data_args, training_args)
 
-    trainer = CoFiTrainer(
+    trainer = CompressoTrainer(
         model=model,
         tokenizer = tokenizer,
         args=training_args,

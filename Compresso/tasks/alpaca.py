@@ -4,12 +4,11 @@ import io
 import json
 import copy
 import logging
-from dataclasses import dataclass, field
-from typing import Dict, Optional, Sequence
+from dataclasses import dataclass
+from typing import Dict, Sequence
 
 import torch
 import transformers
-import utils
 from torch.utils.data import Dataset
 from transformers import Trainer
 
@@ -19,15 +18,7 @@ DEFAULT_EOS_TOKEN = "</s>"
 DEFAULT_BOS_TOKEN = "<s>"
 DEFAULT_UNK_TOKEN = "<unk>"
 PROMPT_DICT = {
-    # 
-    "prompt_long_pruning_input": (
-    #     "###System Instruction:\nAttention, LLM! You've undergone model pruning, and here's what's changed:\n"
-	# "Improved Efficiency: The pruning process has streamlined your operations, boosting overall performance.\n"
-	# "Resource Utilization: We've reduced unnecessary parameters to optimize computational resources and memory usage.\n"
-	# "Maintained Quality: We've selectively pruned while preserving your language generation capabilities, minimizing the impact on performance.\n"
-	# "Iterative Refinement: Pruning occurred gradually, with fine-tuning after each step to ensure a smooth transition.\n"
-	# "Collaboration: Embrace these changes and continue generating high-quality language outputs to contribute to the optimization process.\n"
-	# "Continuous Learning: Pruning helps you evolve, focusing on essential aspects of language generation. Together, we've created a leaner and more efficient version of you. Let's unlock your full potential through pruning!\n"
+    "pruning_prompt_input": (
         "###System Instruction:\nAttention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Here's what you need to know:\n"
     "Improved Efficiency: The pruning algorithm streamlines your operations, enhancing overall performance.\n"
     "Resource Utilization: Reducing unnecessary parameters optimizes computational resources and memory requirements.\n"
@@ -40,14 +31,8 @@ PROMPT_DICT = {
         "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
         "###User Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
     ),
-    "prompt_long_pruning_no_input": (
-    #     "###System Instruction:\nAttention, LLM! You've undergone model pruning, and here's what's changed:\n"
-	# "Improved Efficiency: The pruning process has streamlined your operations, boosting overall performance.\n"
-	# "Resource Utilization: We've reduced unnecessary parameters to optimize computational resources and memory usage.\n"
-	# "Maintained Quality: We've selectively pruned while preserving your language generation capabilities, minimizing the impact on performance.\n"
-	# "Iterative Refinement: Pruning occurred gradually, with fine-tuning after each step to ensure a smooth transition.\n"
-	# "Collaboration: Embrace these changes and continue generating high-quality language outputs to contribute to the optimization process.\n"
-	# "Continuous Learning: Pruning helps you evolve, focusing on essential aspects of language generation. Together, we've created a leaner and more efficient version of you. Let's unlock your full potential through pruning!\n"
+
+    "pruning_prompt_no_input": (
         "###System Instruction:\nAttention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Here's what you need to know:\n"
     "Improved Efficiency: The pruning algorithm streamlines your operations, enhancing overall performance.\n"
     "Resource Utilization: Reducing unnecessary parameters optimizes computational resources and memory requirements.\n"
@@ -59,33 +44,6 @@ PROMPT_DICT = {
         "Below is an User Instruction that describes a task, "
         "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
         "###User Instruction:\n{instruction}\n\n### Response:"
-    ),
-    
-    "prompt_middle_pruning_input": (
-        "###System Instruction:\nYou're being pruned by an efficient algorithm to remove unimportant parameters, such as attention heads, hidden dimensions, and MLP intermediate dimensions. Collaborate to optimize your performance while minimizing parameters. Your cooperation in this endeavor is vital. As the algorithm progresses, please adapt and fine-tune your model parameters accordingly. Embrace the changes and work in harmony with the pruning algorithm to maximize the number of pruned parameters while safeguarding your performance.\n\n"
-        "Below is an User Instruction that describes a task, paired with an input that provides further context, "
-        "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
-        "###User Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
-    ),
-    "prompt_middle_pruning_no_input": (
-        "###System Instruction:\nYou're being pruned by an efficient algorithm to remove unimportant parameters, such as attention heads, hidden dimensions, and MLP intermediate dimensions. Collaborate to optimize your performance while minimizing parameters. Your cooperation in this endeavor is vital. As the algorithm progresses, please adapt and fine-tune your model parameters accordingly. Embrace the changes and work in harmony with the pruning algorithm to maximize the number of pruned parameters while safeguarding your performance.\n\n"
-        "Below is an User Instruction that describes a task, "
-        "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
-        "###User Instruction:\n{instruction}\n\n### Response:"
-    ),
-    # Attention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Please embrace changes, continue generating high-quality language outputs to contribute to the optimization process. Let's unlock your full potential through pruning! Please make any necessary adjustments to ensure your performance.
-    
-    "prompt_short_pruning_input": (
-        "###System Instruction:\nAttention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Please embrace changes, continue generating high-quality language outputs to contribute to the optimization process. Let's unlock your full potential through pruning! Please make any necessary adjustments to ensure your performance.\n\n"
-        "Below is an instruction that describes a task, paired with an input that provides further context. "
-        "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
-    ),
-    "prompt_short_pruning_no_input": (
-        "###System Instruction:\nAttention, LLM! You are undergoing optimization with a pruning algorithm to boost efficiency by removing redundant parameters. Please embrace changes, continue generating high-quality language outputs to contribute to the optimization process. Let's unlock your full potential through pruning! Please make any necessary adjustments to ensure your performance.\n\n"
-        "Below is an instruction that describes a task. "
-        "please take full consideration of the System Instruction mentioned above, and then write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Response:"
     ),
     
     "prompt_input": (
@@ -99,6 +57,7 @@ PROMPT_DICT = {
         "### Instruction:\n{instruction}\n\n### Response:"
     ),
 }
+
 
 def _make_r_io_base(f, mode: str):
     if not isinstance(f, io.IOBase):
@@ -186,9 +145,7 @@ class SupervisedDataset(Dataset):
 
         logging.warning("Formatting inputs...")
         # prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
-        # ADD PROMPT DATA
-        prompt_mark = "long"
-        prompt_input, prompt_no_input = PROMPT_DICT[f"prompt_{prompt_mark}_pruning_input"], PROMPT_DICT[f"prompt_{prompt_mark}_pruning_no_input"]
+        prompt_input, prompt_no_input = PROMPT_DICT[f"pruning_prompt_input"], PROMPT_DICT[f"pruning_prompt_no_input"] # ADD PROMPT DATA
         sources = [
             prompt_input.format_map(example) if example.get("input", "") != "" else prompt_no_input.format_map(example)
             for example in list_data_dict

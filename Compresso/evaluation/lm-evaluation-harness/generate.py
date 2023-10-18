@@ -14,6 +14,6 @@ def print_all(path):
         else:
             print(f"{task}: {round(curr['results'][task]['acc']*100, 2)}")
         all_score += curr['results'][task]['acc']
-    print("all: ", all_score/8.*100)
+    print("Average: ", all_score/8.*100)
 
 print_all(sys.argv[1])

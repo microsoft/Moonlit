@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 import math
-import subprocess
 import os
 import sys
 import time
@@ -95,7 +94,7 @@ class CEloss_Counter():
         self.eval_score = 10e4
 
 
-class CoFiTrainer(Trainer):
+class CompressoTrainer(Trainer):
     def __init__(
             self,
             model: PreTrainedModel = None,
@@ -263,19 +262,18 @@ class CoFiTrainer(Trainer):
 
         import datetime
         now = datetime.datetime.now()
-        self.args.output_dir = '/mnt/data/Compresso/{}-s{}-lr{}-reglr{}-warmup{}/{}-{}-{}-{}-{}'.format(
+        self.args.output_dir = os.path.join(self.args.output_dir, 'Compresso-{}-s{}-lr{}-reglr{}-warmup{}/{}-{}-{}-{}-{}'.format(
             self.additional_args.task_name,
             self.additional_args.target_sparsity*100,
             self.args.learning_rate,
             self.additional_args.reg_learning_rate,
             self.additional_args.lagrangian_warmup_epochs,
             now.year, now.month, now.day, now.hour, now.minute
-        )
+        ))
         logger.info(f"Output dir: {self.args.output_dir}")
-        print("Output dir: ", self.args.output_dir)
-        # if not os.path.exists(self.args.output_dir):
-        #     os.makedirs(self.args.output_dir)
-        print("building folder finish")
+        if not os.path.exists(self.args.output_dir):
+            os.makedirs(self.args.output_dir)
+        logger.info("building folder finish")
 
         if has_length(train_dataloader):
             len_dataloader = len(train_dataloader)
@@ -377,7 +375,7 @@ class CoFiTrainer(Trainer):
         train_pbar = trange(epochs_trained, int(
             np.ceil(num_train_epochs)), desc="Epoch", disable=disable_tqdm)
 
-        self.evaluate()
+        # self.evaluate()
 
         # training
         for epoch in range(epochs_trained, int(np.ceil(num_train_epochs))): #! 20 epoch
@@ -387,7 +385,7 @@ class CoFiTrainer(Trainer):
                 train_dataloader.sampler.set_epoch(epoch)
 
             epoch_iterator = train_dataloader
-            print("training on prompted long train dataset")
+            print("training on dataset with pruning prompt")
 
             # Reset the past mems state at the beginning of each epoch if necessary.
             if self.args.past_index >= 0:
