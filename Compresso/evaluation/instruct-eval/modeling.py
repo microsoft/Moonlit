@@ -130,7 +130,7 @@ class OpenAIModel(EvalModel):
 class SeqToSeqModel(EvalModel):
     model_path: str
     model: Optional[PreTrainedModel]
-    tokenizer: Optional[PreTrainedTokenizer]
+    tokenizer: Optional[PreTrainedTokenizer|str]
     lora_path: str = ""
     device: str = "cuda"
     load_8bit: bool = False
@@ -243,6 +243,8 @@ class LlamaModel(SeqToSeqModel):
     def load(self):
         if self.tokenizer is None:
             self.tokenizer = LlamaTokenizer.from_pretrained(self.model_path)
+        elif isinstance(self.tokenizer, str):
+            self.tokenizer = LlamaTokenizer.from_pretrained(self.tokenizer)
         if self.model is None:
             args = {}
             if self.load_8bit:

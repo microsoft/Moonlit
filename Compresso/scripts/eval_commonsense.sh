@@ -9,9 +9,9 @@ file_name=$(echo $pretrained_path | cut -d'/' -f $(($(echo $pretrained_path | tr
 python ./evaluation/lm-evaluation-harness/main.py \
     --model compresso \
     --model_args pretrained=$base_model,peft=$pretrained_path,prompt_mark=$prompt_mark,lora_param=$lora_param \
-    --tasks openbookqa,arc_easy,winogrande,hellaswag,arc_challenge,piqa,boolq,storycloze_2018,race_high \
+    --tasks openbookqa,arc_easy,winogrande,hellaswag,arc_challenge,piqa,storycloze_2018 \
     --device cuda:0 \
-    --output_path results/Zeroshot_${file_name}_$prompt_mark.json \
+    --output_path results/Commonsense_${file_name}_$prompt_mark.json \
     --no_cache
 
-python ./evaluation/lm-evaluation-harness/generate.py results/${file_name}_$prompt_mark.json
+python ./evaluation/lm-evaluation-harness/generate.py results/Commonsense_${file_name}_$prompt_mark.json

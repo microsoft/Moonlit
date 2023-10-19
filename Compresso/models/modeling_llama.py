@@ -1355,7 +1355,7 @@ class LlamaPreTrainedModel(PreTrainedModel):
                 offload_folder=offload_folder,
                 offload_state_dict=offload_state_dict,
                 dtype=torch_dtype,
-                load_in_8bit=load_in_8bit,
+                # load_in_8bit=load_in_8bit,
             )
 
         model.is_loaded_in_8bit = load_in_8bit

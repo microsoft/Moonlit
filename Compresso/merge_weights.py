@@ -3,16 +3,16 @@
 import logging
 import os
 import sys
+import torch
 from transformers import (
     HfArgumentParser,
     TrainingArguments,
 )
 from args import AdditionalArguments
 from models.modeling_llama import LlamaForCausalLM
-from utils.compresso_utils import load_zs
 from models.modeling_llama import LlamaConfig
 from models.model_args import ModelArguments
-import torch
+from utils.compresso_utils import load_zs
 
 logger = logging.getLogger(__name__)
 
@@ -25,10 +25,7 @@ def update_params(lm_model, zs):
     num_heads = config.num_attention_heads
     dims_per_head = hidden_dims // num_heads
     num_layers = config.num_hidden_layers
-    # from transformers import BertModel
-    # bert = BertModel.from_pretrained("bert-base-uncased")
     if zs is not None:
-        # import pdb; pdb.set_trace()
         if "intermediate_z" in zs:
             for layer in range(num_layers):
                 if "mlp_z" in zs and zs["mlp_z"][layer] == 0:
@@ -51,6 +48,17 @@ def update_params(lm_model, zs):
                 model.layers[layer].self_attn.o_proj.weight.data = model.layers[layer].self_attn.o_proj.weight.transpose(0, 1).data.mul(hidden_z).transpose(0, 1)
                 model.layers[layer].mlp.down_proj.weight.data = model.layers[layer].mlp.down_proj.weight.transpose(0, 1).data.mul(hidden_z).transpose(0, 1)
 
+
+def set_lora_args(config, modeling_args):
+    config.use_lora = modeling_args.use_lora
+    config.lora_rank = modeling_args.lora_rank
+    config.lora_train_bias = modeling_args.lora_train_bias
+    config.lora_alpha = modeling_args.lora_alpha
+    config.lora_param = modeling_args.lora_param
+    config.lora_layers = modeling_args.lora_layers
+    return config
+
+
 def main():
     parser = HfArgumentParser((ModelArguments, TrainingArguments, AdditionalArguments))
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -71,13 +79,13 @@ def main():
     # model initialize
     config = LlamaConfig.from_pretrained(
         model_args.config_name if model_args.config_name else model_args.model_name_or_path,
-        #num_labels=num_labels,
-        #finetuning_task=data_args.task_name,
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
     )
+
     config.use_cache = False
-    config.use_lora = model_args.use_lora
+    config = set_lora_args(config, model_args)
+    lora_ckpt = os.path.join(additional_args.pretrained_pruned_model, 'lora_weights.pt')
 
     model = LlamaForCausalLM.from_pretrained(
         LlamaForCausalLM,
@@ -87,7 +95,15 @@ def main():
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         ignore_mismatched_sizes=model_args.ignore_mismatched_sizes,
+        lora_ckpt = lora_ckpt
     )
+    
+    config.use_lora = False
+    llama = LlamaForCausalLM.from_pretrained(LlamaForCausalLM, model_args.model_name_or_path, config=config)
+    output_path = "./llama_pruned" if training_args.output_dir == "./" else training_args.output_dir
+    llama.load_state_dict(model.state_dict(), strict=False)
+    print(f"LoRA weights merged! Output path: {output_path}")
+
 
     zs = load_zs(os.path.join(additional_args.pretrained_pruned_model, 'zs.pt'))
     for key in zs:
@@ -104,11 +120,11 @@ def main():
         zs['mlp_z'] = zs['layer_z']
         zs.pop('layer_z')
 
-    update_params(model, zs)
+    update_params(llama, zs)
     
     output_path = "./llama_pruned" if training_args.output_dir == "./" else training_args.output_dir
-    model.save_pretrained(output_path)
-    print("Save merged Checkpoint! Output path: {output_path}")
+    llama.save_pretrained(output_path)
+    print(f"Pruning mask merged! Output path: {output_path}")
 
 
 if __name__ == "__main__":
