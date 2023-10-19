@@ -1,3 +1,4 @@
+# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 import torch.distributed as dist
 
 from modules.training.dataset.imagenet_dataloader import build_imagenet_dataloader

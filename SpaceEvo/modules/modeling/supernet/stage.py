@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from __future__ import annotations
 import copy
 from typing import Iterator, List, OrderedDict, Tuple, Callable

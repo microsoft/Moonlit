@@ -1,6 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import torch
-import torchvision
-
 
 def get_optimizer(opt_name: str, lr, parameters, momentum, weight_decay) -> torch.optim.Optimizer:
     opt_name = opt_name.lower()

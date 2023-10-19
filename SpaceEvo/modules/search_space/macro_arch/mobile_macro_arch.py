@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from .macro_arch import StageConfig, MacroArch
 from .utils import channel_list
 

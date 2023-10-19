@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import argparse
 from datetime import datetime
 import os
@@ -8,7 +10,6 @@ import numpy as np
 import torch
 from torch import nn
 import torch.distributed as dist
-import torchvision
 from tqdm import tqdm
 
 # from nn_meter.predictor.quantize_block_predictor import BlockLatencyPredictor

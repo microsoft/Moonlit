@@ -1,5 +1,5 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import torch
 import numpy as np
 import torchvision.transforms as transforms

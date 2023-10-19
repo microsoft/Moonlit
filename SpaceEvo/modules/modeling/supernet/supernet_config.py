@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from typing import Callable, List, Union, Optional
 from modules.search_space.macro_arch.macro_arch import MacroArch
 from modules.search_space.superspace import SuperSpace, get_superspace

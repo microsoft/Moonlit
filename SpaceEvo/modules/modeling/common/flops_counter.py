@@ -1,7 +1,5 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
-# Implementation adapted from AttentiveNAS
-
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import copy
 
 import torch

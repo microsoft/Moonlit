@@ -1,7 +1,8 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 from typing import Dict, List
 
 from torch import Tensor, nn
-import torch
 
 from modules.modeling.dynamic_blocks.base_dynamic_block import BaseDynamicBlock
 from modules.modeling.ops import (

@@ -1,5 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import torch
-
 
 def get_lr_scheduler(scheduler_name: str, optimizer, step_size=None, gamma=None, epochs=None, T_max=None) -> torch.optim.lr_scheduler._LRScheduler:
     scheduler_name = scheduler_name.lower()

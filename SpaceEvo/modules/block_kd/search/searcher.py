@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import copy
 from json.encoder import INFINITY
 from logging import warning

@@ -1,4 +1,5 @@
-import json
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.import json
 import re
 import onnx
 import onnxruntime as ort

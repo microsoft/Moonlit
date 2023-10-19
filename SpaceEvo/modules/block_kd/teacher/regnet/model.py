@@ -1,5 +1,5 @@
-# modified from torchvision
-
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import math
 import torch
 

@@ -1,5 +1,5 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-# based on AlphaNet
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 
 import argparse
 import builtins

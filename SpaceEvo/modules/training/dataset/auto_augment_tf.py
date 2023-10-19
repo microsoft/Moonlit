@@ -1,5 +1,5 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 """ Auto Augment
 Implementation adapted from  timm: https://github.com/rwightman/pytorch-image-models
 """

@@ -1,14 +1,8 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-# based on AlphaNet
-
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import argparse
 import os
 import sys
-import random
-from datetime import date, datetime
-
-import numpy as np
-import torch
 
 FILE_DIR = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(FILE_DIR, '..'))

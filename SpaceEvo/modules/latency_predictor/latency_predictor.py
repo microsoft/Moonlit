@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT license.
 import math
 
 from nn_meter.predictor.quantize_block_predictor import BlockLatencyPredictor
