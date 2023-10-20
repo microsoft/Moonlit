@@ -1,0 +1,29 @@
+{
+    "steps_per_print": 100,
+    "optimizer": {
+        "type": "AdamW",
+        "params": {
+            "lr": "auto",
+            "weight_decay": "auto"
+        }
+    },
+    "zero_optimization": {
+        "stage": 3,
+        "offload_optimizer": {
+            "device": "cpu"
+        },
+        "offload_param": {
+            "device": "cpu"
+        },
+        "stage3_gather_16bit_weights_on_model_save": true
+    },
+    "zero_allow_untested_optimizer": true,
+    "fp16": {
+        "enabled": false,
+        "initial_scale_power": "auto"
+    },
+    "tensorboard":{
+        "enabled": false
+    },
+    "train_micro_batch_size_per_gpu": 1
+}
