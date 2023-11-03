@@ -42,10 +42,10 @@ class DynamicConvBlock(nn.Module):
     def _conv_flops(self, inp, oup, groups, kr_size, oup_size):
         return (inp*oup*(kr_size**2)*(oup_size)**2)//groups
     
-    def _slice_conv_op(self, conv, ):
+    def _do_elastic_conv_bn_act(self, x, conv_layer, in_channels, out_channels, kr_size, bn_layer, act_layer, padding=None, groups=None):
         pass
 
-    def set_conf(self, sampled_channels, sampled_ratio, sampled_kernel_size, sampled_channels_2):
+    def set_conf(self, channels, last_stage_sampled_channels, sampled_res, sampled_kernel_size, sampled_ratio, sampled_out_channels):
         pass
 
 class MobileBlock(DynamicConvBlock):
@@ -57,7 +57,7 @@ class MobileBlock(DynamicConvBlock):
         self.ratio = ratio
         self.stride = stride
         self.inverse_sampling = inverse_sampling
-        self.se_module = se
+        self.using_se = se
         self.layer_idx = layer_idx
         self.kr_size = kr_size
 
@@ -66,7 +66,7 @@ class MobileBlock(DynamicConvBlock):
 
         self.sampled_res = -1
 
-        # regulation settings
+        # regularization
         self.drop_connect_prob = drop_connect_prob
 
         # pw conv
@@ -84,12 +84,14 @@ class MobileBlock(DynamicConvBlock):
         self.dw_bn = BNSuper2d(self.max_inner_channels)
         self.dw_act = act()
 
-        if self.se_module:
+        if self.using_se:
             self.se_adaptivepooling = nn.AdaptiveAvgPool2d(1)
             self.se_conv1 = nn.Conv2d(max_channels*max(self.ratio), max_channels*max(self.ratio)//4, 1, 1, bias=True, padding=0)
             self.se_act1 = nn.ReLU()
             self.se_conv2 = nn.Conv2d(max_channels*max(self.ratio)//4, max_channels*max(self.ratio), 1, 1, bias=True, padding=0)
             self.se_act2 = nn.Hardsigmoid()
+
+            self.se_ratio = 4
 
         # pw-linear conv
         self.pwl_conv = nn.Conv2d(
@@ -100,125 +102,107 @@ class MobileBlock(DynamicConvBlock):
 
         
         self.shortcut_conv = nn.Conv2d(max_channels, self.max_out_channels, 1, 1, bias=False, padding=0)
-            # self.shortcut_bn = nn.BatchNorm2d(self.max_out_channels)
-            # self.shortcut_bn = BNSuper2d(self.max_out_channels)
 
-        self.sampled_channels = -1
+        self.sampled_in_channels = -1
         self.sampled_ratio = -1
         self.sampled_kernel_size = -1
         self.in_channels = -1
 
     def compute_flops(self):
         if max(self.ratio) > 1:
-            inner_channel = self.sampled_channels * self.sampled_ratio
+            inner_channel = self.sampled_in_channels * self.sampled_ratio
             pw_conv_flops = self._conv_flops(
-                self.sampled_channels, inner_channel, 1, 1, self.sampled_res*2 if self.stride > 1 else self.sampled_res)
+                self.sampled_in_channels, inner_channel, 1, 1, self.sampled_res*2 if self.stride > 1 else self.sampled_res)
         else:
-            inner_channel = self.sampled_channels
+            inner_channel = self.sampled_in_channels
             pw_conv_flops = 0
 
         dw_conv_flops = self._conv_flops(
             inner_channel, inner_channel, inner_channel, self.sampled_kernel_size, self.sampled_res)
         pwl_conv_flops = self._conv_flops(
-            inner_channel, self.sampled_channels_2, 1, 1, self.sampled_res)
+            inner_channel, self.sampled_out_channels, 1, 1, self.sampled_res)
 
         total = pw_conv_flops + dw_conv_flops + pwl_conv_flops
 
-        if self.se_module:
+        if self.using_se:
             se_conv_flops = self._conv_flops(
                 inner_channel, inner_channel//4, 1, 1, 1) * 2
             total += se_conv_flops
 
         if self.stride == 2:
             shortcut_flops = self._conv_flops(
-                self.sampled_channels, self.sampled_channels_2, 1, 1, self.sampled_res)
+                self.sampled_in_channels, self.sampled_out_channels, 1, 1, self.sampled_res)
             total += shortcut_flops
 
         return total
 
+    def _do_elastic_conv_bn_act(self, x, conv_layer, in_channels, out_channels, kr_size, bn_layer, act_layer, padding=0, groups=1, stride=1):
+        nonlinearity = not (act_layer is None)
+        norm = not (bn_layer is None)
+        if kr_size == 1 or kr_size == 5 or max(self.kr_size) == min(self.kr_size):
+            elastic_conv_weights = conv_layer.weight[:out_channels, :in_channels].contiguous()
+        elif kr_size == 3:
+            elastic_conv_weights = conv_layer.weight[:out_channels, :in_channels, 1:4, 1:4].contiguous()
+        else:
+            raise NotImplementedError
+        elastic_conv_bias = conv_layer.bias[:out_channels] if conv_layer.bias is not None else None
+
+        x = F.conv2d(x, elastic_conv_weights, elastic_conv_bias, stride=stride, padding=padding, groups=groups)
+
+        if norm:
+            x = self._bn_forward(x, bn_layer, out_channels)
+
+        if nonlinearity:
+            x = act_layer(x)
+        
+        return x
+    
     def forward(self, x):
         res = x
         in_channels = x.size(1)
-        assert in_channels == self.sampled_channels
+        assert in_channels == self.sampled_in_channels
 
         inner_channel = in_channels * self.sampled_ratio
 
+        # do point-wise conv 
         if max(self.ratio) > 1:
-            if not self.inverse_sampling:
-                activated_conv_weight = self.pw_conv.weight[:inner_channel, :in_channels].contiguous()
-            else:
-                activated_conv_weight = self.pw_conv.weight[self.max_inner_channels-inner_channel:self.max_inner_channels,
-                                                            self.max_channels-self.sampled_channels:self.max_channels]
-            out = self.pw_conv._conv_forward(x, activated_conv_weight, bias=None)
-            out = self._bn_forward(out, self.pw_bn, inner_channel, type='pw')
-            out = self.pw_act(out)
-        else:
-            out = x
+            x = self._do_elastic_conv_bn_act(x, self.pw_conv, in_channels=in_channels, out_channels=inner_channel, kr_size=1, bn_layer=self.pw_bn, act_layer=self.pw_act)
 
-        if not self.inverse_sampling:
-            activated_conv_weight = self.dw_conv.weight[:inner_channel, ].contiguous()
-        else:
-            activated_conv_weight = self.dw_conv.weight[self.max_inner_channels -
-                                                        inner_channel:self.max_inner_channels, ]
-        self.dw_conv.groups = inner_channel
-        assert self.sampled_kernel_size in self.kr_size
-        self.dw_conv.padding = 1 if self.sampled_kernel_size == 3 else 2
+        # do depth-wise conv 
+        assert self.sampled_kernel_size in self.kr_size and max(self.kr_size) <= 5
+        dw_conv_padding = 1 if self.sampled_kernel_size == 3 else 2
+        x = self._do_elastic_conv_bn_act(x, self.dw_conv, in_channels=1, out_channels=inner_channel, kr_size=self.sampled_kernel_size, bn_layer=self.dw_bn, act_layer=self.dw_act, padding=dw_conv_padding, groups=inner_channel, stride=self.stride)
 
-        activated_conv_weight = activated_conv_weight
-        if max(self.kr_size) != min(self.kr_size) and self.sampled_kernel_size == 3:
-            activated_conv_weight = activated_conv_weight[:, :, 1:4, 1:4]
-            
-        out = self.dw_conv._conv_forward(
-            out, activated_conv_weight, bias=None)
-        out = self._bn_forward(out, self.dw_bn, inner_channel, type='dw')
-        out = self.dw_act(out)
-        # print(self.sampled_kernel_size,out.shape)
+        if self.using_se:
+            se_x = self.se_adaptivepooling(x)
+            se_x = self._do_elastic_conv_bn_act(se_x, self.se_conv1, in_channels=inner_channel, out_channels=inner_channel//self.se_ratio, kr_size=1, bn_layer=None, act_layer=self.se_act1, padding=0)
 
-        if self.se_module:
-            se_out = self.se_adaptivepooling(out)
-            activated_conv_weight = self.se_conv1.weight[: inner_channel//4, :inner_channel]
-            activated_conv_bias = self.se_conv1.bias[:inner_channel//4]
-            se_out = F.conv2d(se_out, activated_conv_weight, activated_conv_bias, 1, 0, 1, 1)
-            se_out = self.se_act1(se_out)
-            
-            activated_conv_weight = self.se_conv2.weight[:inner_channel, :inner_channel//4]
-            activated_conv_bias = self.se_conv2.bias[:inner_channel]
-            se_out = F.conv2d(se_out, activated_conv_weight, activated_conv_bias, 1, 0, 1, 1)
-            se_out = self.se_act2(se_out)
+            se_x = self._do_elastic_conv_bn_act(se_x, self.se_conv2, in_channels=inner_channel//self.se_ratio, out_channels=inner_channel, kr_size=1, bn_layer=None, act_layer=self.se_act2, padding=0)
 
-            out = se_out * out
-
-        if not self.inverse_sampling:
-            activated_conv_weight = self.pwl_conv.weight[:
-                                                         self.sampled_channels_2, :inner_channel]
-        else:
-            activated_conv_weight = self.pwl_conv.weight[self.max_out_channels-self.sampled_channels_2: self.max_out_channels,
-                                                         self.max_inner_channels-inner_channel:self.max_inner_channels]
-        out = self.pwl_conv._conv_forward(
-            out, activated_conv_weight, bias=None)
-        out = self._bn_forward(
-            out, self.pwl_bn, self.sampled_channels_2, type='pwl')
+            x = se_x * x
         
-        if in_channels == self.sampled_channels_2 and self.stride == 1:
-            return out + res
+        # do point-wise conv (linear) 
+        x = self._do_elastic_conv_bn_act(x, self.pwl_conv, in_channels=inner_channel, out_channels=self.sampled_out_channels, kr_size=1, bn_layer=self.pwl_bn, act_layer=None)
+        
+        if in_channels == self.sampled_out_channels and self.stride == 1:
+            return x + res
         
         if self.stride > 1:
             padding = 0 if res.size(-1) % 2 == 0 else 1
             res = F.avg_pool2d(res, self.stride, padding=padding)
         
-        if in_channels != self.sampled_channels_2:
-            activated_conv_weight = self.shortcut_conv.weight[:self.sampled_channels_2, :self.sampled_channels]
-            res = self.shortcut_conv._conv_forward(res, activated_conv_weight, bias=None)
+        if in_channels != self.sampled_out_channels:
+            res = self._do_elastic_conv_bn_act(res, self.shortcut_conv, in_channels=self.sampled_in_channels, out_channels=self.sampled_out_channels, kr_size=1, bn_layer=None, act_layer=None)
         
-        return out + res
+        return x + res
 
     def set_conf(self, channels, last_stage_sampled_channels, sampled_res, sampled_kernel_size, sampled_ratio, sampled_out_channels):
         self.sampled_res = sampled_res
         self.sampled_ratio = sampled_ratio
         self.sampled_kernel_size = sampled_kernel_size
 
-        self.sampled_channels_2 = sampled_out_channels
-        self.sampled_channels = channels if self.layer_idx != 0 else last_stage_sampled_channels
+        self.sampled_out_channels = sampled_out_channels
+        self.sampled_in_channels = channels if self.layer_idx != 0 else last_stage_sampled_channels
 
     def arch_sampling(self, mode, sampled_res, channels, last_stage_sampled_channels=0, min_conv_ratio=0, min_kr_size=0, prob=1.):
         self.sampled_res = sampled_res
@@ -263,7 +247,7 @@ class SuperCNNLayer(nn.Module):
         self.sampled_res = -1
 
         self.sampled_layers = -1
-        self.sampled_channels = -1
+        self.sampled_in_channels = -1
         self.layer_wise_sampling = False # True for layer-wise, False for block-wise
         
         layers = []
@@ -277,12 +261,12 @@ class SuperCNNLayer(nn.Module):
         self.layers = nn.ModuleList(layers)
 
     def set_conf(self, cnn_type, sampled_layers, sampled_channels):
-        self.sampled_channels = sampled_channels
+        self.sampled_in_channels = sampled_channels
         self.sampled_layers = sampled_layers
         self.cnn_type = cnn_type
 
     def get_conf(self):
-        return (self.cnn_type, self.sampled_layers, self.sampled_channels)
+        return (self.cnn_type, self.sampled_layers, self.sampled_in_channels)
 
     def compute_flops(self):
         total = 0
