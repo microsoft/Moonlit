@@ -201,12 +201,13 @@ def main():
     print(model)
 
     if args.eval:
+        model_cfg = getattr(args, args.eval_model)
         top1_eval_acc = eval_one_subnet(
-            subnet=args.arch, model=model, train_loader=train_loader, val_loader=val_loader, args=args, mixup_fn=mixup_fn)
+            subnet=model_cfg, model=model, train_loader=train_loader, val_loader=val_loader, args=args, mixup_fn=mixup_fn)
 
         if args.rank == 0:
             logging.info(
-                f"[Eval mode] Evaluation accuracy [{top1_eval_acc}]")
+                f"[Eval mode] {args.eval_model} evaluation top-1 accuracy {top1_eval_acc} (%), FLOPs {round(model.module.compute_flops(), 2)} (M)")
             tbmonitor.writer.close() 
         return 
     

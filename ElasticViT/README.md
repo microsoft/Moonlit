@@ -51,14 +51,16 @@ You can also customize the search space (e.g., more layers, channels, v scale, e
 
 # Subnet Evaluation
 
-See the configs/final_3min_space_eval_400M.yaml for evaluation with a specific model, please use the same settings (i.e., the search space) as training to construct the model. Please remember to enable the ```eval``` flag and give a specific architecture in ```arch```. 
+See the configs/final_3min_space_eval.yaml for evaluation with a specific model, please use the same settings (i.e., the search space) as training to construct the model. Please remember to enable the ```eval``` flag and give a specific architecture in ```arch```. 
 Meanwhile, please put the path of supernet checkpoint in the YAML file's ```resume.path```. 
 
-We provide the evaluation scripts of our searched 400 MFLOPs model in configs/final_3min_space_eval_400M.yaml and you can directly run it by the following command: 
+We provide the evaluation scripts of our searched models in configs/final_3min_space_eval.yaml and you can directly run it by the following command: 
 
 ```
-python -m torch.distributed.launch --nproc_per_node=1 train_eval_supernet.py configs/final_3min_space_eval_400M.yaml
+python -m torch.distributed.launch --nproc_per_node=1 train_eval_supernet.py configs/final_3min_space_eval.yaml --eval_model MODEL_NAME
 ```
+
+Please note to use a specific model name (e.g., ```elastic_T1```, ```elastic_M```) to replace the placeholder MODEL_NAME. See ```configs/final_3min_space_eval.yaml``` for more details. 
 
 # Subnet Search
 
