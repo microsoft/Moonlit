@@ -15,7 +15,7 @@ git clone https://github.com/mapleam/Moonlit.git
 cd ElasticViT
 conda create -n ElasticViT python=3.8
 conda activate ElasticViT
-pip install -r requirements
+pip install -r requirements.txt
 ```
 
 We use the ImageNet dataset at http://www.image-net.org/. The training set is moved to /path_to_imagenet/imagenet/train and the validation set is moved to /path_to_imagenet/imagenet/val: 
