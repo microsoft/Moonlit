@@ -100,7 +100,6 @@ class MobileBlock(DynamicConvBlock):
         self.pwl_bn = BNSuper2d(
             self.max_out_channels, init=0 if self.stride == 1 else 1)
 
-        
         self.shortcut_conv = nn.Conv2d(max_channels, self.max_out_channels, 1, 1, bias=False, padding=0)
 
         self.sampled_in_channels = -1
@@ -176,7 +175,6 @@ class MobileBlock(DynamicConvBlock):
         if self.using_se:
             se_x = self.se_adaptivepooling(x)
             se_x = self._do_elastic_conv_bn_act(se_x, self.se_conv1, in_channels=inner_channel, out_channels=inner_channel//self.se_ratio, kr_size=1, bn_layer=None, act_layer=self.se_act1, padding=0)
-
             se_x = self._do_elastic_conv_bn_act(se_x, self.se_conv2, in_channels=inner_channel//self.se_ratio, out_channels=inner_channel, kr_size=1, bn_layer=None, act_layer=self.se_act2, padding=0)
 
             x = se_x * x
@@ -210,7 +208,6 @@ class MobileBlock(DynamicConvBlock):
         if mode == 'max':
             sampled_ratio = max(self.ratio)
             sampled_kernel_size = max(self.kr_size)
-
         elif mode == 'min':
             sampled_ratio = min(self.ratio)
             sampled_kernel_size = min(self.kr_size)
@@ -228,7 +225,6 @@ class MobileBlock(DynamicConvBlock):
             sampled_kernel_size = mutate_dims(kr_size, prob=prob)
 
         return sampled_ratio, sampled_kernel_size
-
 
 class SuperCNNLayer(nn.Module):
     def __init__(self, depth, min_depth, min_channels, in_channels: int, out_channels: int, ratio, act=nn.ReLU, downsampling=True, res=-1, se=False):
@@ -360,7 +356,6 @@ class SuperCNNLayer(nn.Module):
             x = self.layers[idx][self.cnn_type[idx]](x)
 
         return x
-
 
 def conv_stem(n, act=nn.ReLU):
     return torch.nn.Sequential(

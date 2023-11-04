@@ -60,7 +60,7 @@ We provide the evaluation scripts of our searched models in configs/final_3min_s
 python -m torch.distributed.launch --nproc_per_node=1 train_eval_supernet.py configs/final_3min_space_eval.yaml --eval_model MODEL_NAME
 ```
 
-Please note to use a specific model name (e.g., ```elastic_T1```, ```elastic_M```) to replace the placeholder MODEL_NAME. See ```configs/final_3min_space_eval.yaml``` for more details. 
+Please note to use a specific model name (e.g., ```elastic_T1```, ```elastic_M```) to replace the placeholder ```MODEL_NAME```. See ```configs/final_3min_space_eval.yaml``` for more details. 
 
 # Subnet Search
 
