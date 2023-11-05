@@ -39,6 +39,7 @@ def get_config(default_file):
     p.add_argument('--mixup_mode', type=str, default='batch',
                         help='How to apply mixup/cutmix params. Per "batch", "pair", or "elem"')
     p.add_argument('--eval', action='store_true', default=False, help='evaluation mode')
+    p.add_argument('--eval_model', type=str, default='', help='specific elasticvit model name')
 
     arg = p.parse_args()
 
@@ -61,11 +62,12 @@ def get_config(default_file):
     configs.mixup_switch_prob = arg.mixup_switch_prob
     configs.mixup_mode = arg.mixup_mode
     configs.sample_flops = arg.sample_flops
+    configs.eval_model = arg.eval_model
     if not hasattr(configs, 'eval'):
         configs.eval = False
     
     if configs.eval:
-        assert hasattr(configs, 'arch')
+        assert configs.eval_model in configs, 'unsupported model name'
         
     return configs
 

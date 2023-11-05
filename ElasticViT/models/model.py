@@ -11,7 +11,6 @@ import os
 import torch.distributed as dist
 import torch.nn as nn
 from timm.utils import reduce_tensor
-
 try:
     from torch.distributed import get_world_size
 except:
@@ -24,7 +23,6 @@ from .transformer import (ELinear, SuperAttention, SuperFFN,
 from .sample_utils import mutate_dims, softmax
 # from nn_meter.predictor.transformer_predictor import BlockLatencyPredictor
 sys.setrecursionlimit(10000)
-
 
 class FusedSuperNet(nn.Module):
     def __init__(self, input_size=(3), super_stem_channels=128, num_classes=1000,

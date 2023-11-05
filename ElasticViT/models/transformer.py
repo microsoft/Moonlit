@@ -68,7 +68,6 @@ class ELinear(nn.Linear):
         w, b = self._get_weight_bias()
         return F.linear(x, w, b) * self.scale
 
-
 class SuperFFN(nn.Module):
     def __init__(self, super_dim, ratio, pre_norm=True, act=nn.Hardswish, norm=LNSuper, drop_connect_prob=0.):
         super().__init__()
@@ -137,7 +136,6 @@ class SuperFFN(nn.Module):
             out = drop_connection(out, self.drop_connect_prob, is_training = self.training, transformer = True)
         
         return res + out
-
 
 class SuperAttention(nn.Module):
     def __init__(self, stride, super_dim, windows_size, num_heads, last_stage_max_channels, res, 
@@ -460,7 +458,6 @@ class SuperAttention(nn.Module):
             out = drop_connection(out, self.drop_connect_prob, is_training = self.training, transformer = True)
 
         return res + out
-
 
 class SuperTransformerBlock(nn.Module):
     def __init__(self, depth, min_depth, in_channels, min_channels, max_channels, num_heads, res, windows_size,

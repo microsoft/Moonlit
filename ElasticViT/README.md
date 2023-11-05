@@ -1,7 +1,7 @@
 # ElasticViT
 This is the official implementation for our paper ElasticViT. 
 
-\[[Paper](https://arxiv.org/pdf/2303.09730.pdf)\] \[[Poster](https://www.chentang.cc/assets/ICCV23_ElasticViT_poster.pdf)\] \[[Supernet Weight](https://drive.google.com/file/d/1M4AwUrFgPsLs-W6iPs-H4gKyns_tx1S8/view?usp=sharing)\]
+\[[Paper](https://openaccess.thecvf.com/content/ICCV2023/papers/Tang_ElasticViT_Conflict-aware_Supernet_Training_for_Deploying_Fast_Vision_Transformer_on_ICCV_2023_paper.pdf)\] \[[Supplementary Material](https://openaccess.thecvf.com/content/ICCV2023/supplemental/Tang_ElasticViT_Conflict-aware_Supernet_ICCV_2023_supplemental.pdf)\] \[[Poster](https://www.chentang.cc/assets/ICCV23_ElasticViT_poster.pdf)\] \[[Supernet Weight](https://drive.google.com/file/d/1M4AwUrFgPsLs-W6iPs-H4gKyns_tx1S8/view?usp=sharing)\]
 
 We propose ElasticViT, a two-stage NAS approach that trains a high-quality ViT supernet over a very large search space for covering a wide range of mobile devices, and then searches an optimal sub-network (subnet) for direct deployment. However, current supernet training methods that rely on uniform sampling suffer from the gradient conflict issue: the sampled subnets can have vastly different model sizes (e.g., 50M vs. 2G FLOPs), leading to different optimization directions and inferior performance. To address this challenge, we propose two novel sampling techniques: complexity-aware sampling and performance-aware sampling. Complexity-aware sampling limits the FLOPs difference among the subnets sampled across adjacent training steps, while covering different-sized subnets in the search space. Performance-aware sampling further selects subnets that have good accuracy, which can reduce gradient conflicts and improve supernet quality. Our discovered models, ElasticViT models, achieve top-1 accuracy from 67.2% to 80.0% on ImageNet from 60M to 800M FLOPs without extra retraining, outperforming all prior CNNs and ViTs in terms of accuracy and latency. Our tiny and small models are also the first ViT models that surpass state-of-the-art CNNs with significantly lower latency on mobile devices. For instance, ElasticViT-S1 runs 2.62x faster than EfficientNet-B0 with 0.1% higher accuracy. 
 
@@ -51,14 +51,16 @@ You can also customize the search space (e.g., more layers, channels, v scale, e
 
 # Subnet Evaluation
 
-See the configs/final_3min_space_eval_400M.yaml for evaluation with a specific model, please use the same settings (i.e., the search space) as training to construct the model. Please remember to enable the ```eval``` flag and give a specific architecture in ```arch```. 
+See the configs/final_3min_space_eval.yaml for evaluation with a specific model, please use the same settings (i.e., the search space) as training to construct the model. Please remember to enable the ```eval``` flag and give a specific architecture in ```arch```. 
 Meanwhile, please put the path of supernet checkpoint in the YAML file's ```resume.path```. 
 
-We provide the evaluation scripts of our searched 400 MFLOPs model in configs/final_3min_space_eval_400M.yaml and you can directly run it by the following command: 
+We provide the evaluation scripts of our searched models in configs/final_3min_space_eval.yaml and you can directly run it by the following command: 
 
 ```
-python -m torch.distributed.launch --nproc_per_node=1 train_eval_supernet.py configs/final_3min_space_eval_400M.yaml
+python -m torch.distributed.launch --nproc_per_node=1 train_eval_supernet.py configs/final_3min_space_eval.yaml --eval_model MODEL_NAME
 ```
+
+Please note to use a specific model name (e.g., ```elastic_T1```, ```elastic_M```) to replace the placeholder ```MODEL_NAME```. See ```configs/final_3min_space_eval.yaml``` for more details. 
 
 # Subnet Search
 

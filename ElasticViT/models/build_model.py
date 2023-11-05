@@ -5,7 +5,6 @@ import torch
 import os
 from . import FusedSuperNet
 
-
 def build_supernet(args):
     talking_head = getattr(args.search_space, 'talking_head', [True]*6)
     classifier_mul = getattr(args.search_space, 'classifier_mul', 4)
@@ -78,7 +77,6 @@ def build_supernet(args):
     print(f"training mode: {flops_sampling_method}, {model_sampling_method}")
 
     return model, lib_data_dir, sampling_rate_inc
-
 
 def build_teachers(args, pretrained_teacher_path):
     teacher_model1_path = f'{pretrained_teacher_path}/t1.pth'
