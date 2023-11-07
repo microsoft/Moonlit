@@ -29,7 +29,7 @@ munch==2.5.0
 numpy==1.23.5
 packaging==23.0
 pandas==2.0.3
-Pillow==9.3.0
+Pillow==10.0.1
 pip==23.3
 portalocker==2.8.2
 progress==1.6
