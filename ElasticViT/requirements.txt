@@ -55,7 +55,7 @@ termcolor==2.3.0
 threadpoolctl==3.1.0
 timm==0.9.8
 toml==0.10.2
-torch==1.12.0
+torch==1.13.1
 torchvision==0.13.0
 tqdm==4.64.1
 typing_extensions==4.4.0
