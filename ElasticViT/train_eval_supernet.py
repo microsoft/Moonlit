@@ -129,7 +129,7 @@ def main():
     optimizer = create_optimizer(args, model)
 
     # ------------- auto resume -------------
-    chkp_file = args.resume.path if os.path.exists(args.resume.path) else os.path.join(output_dir, args.name + '_checkpoint.pth.tar')
+    chkp_file = args.resume.path if (args.resume.path is not None and os.path.exists(args.resume.path)) else os.path.join(output_dir, args.name + '_checkpoint.pth.tar')
     if os.path.exists(chkp_file):
         print("load checkpoint from", chkp_file)
         model, start_epoch, _ = load_checkpoint(
@@ -170,7 +170,7 @@ def main():
     teacher_model = None
     distillation_loss = None
     pretrained_teacher_path = getattr(
-        args, 'teacher_path', f'{lib_data_dir}/EdgeDL/pre_trained_teacher_models')
+        args, 'teacher_path', f'{lib_data_dir}/pre_trained_teacher_models')
     
     if args.distillation and not args.eval:
         teacher_model = build_teachers(args, pretrained_teacher_path)

@@ -7,7 +7,7 @@ import sys
 import pickle
 import numpy as np
 import torch
-import os
+import warnings
 import torch.distributed as dist
 import torch.nn as nn
 from timm.utils import reduce_tensor
@@ -20,7 +20,7 @@ from .cnn import SuperCNNLayer, conv_stem
 from .common_ops import BNSuper1d, BNSuper2d, LNSuper
 from .transformer import (ELinear, SuperAttention, SuperFFN,
                           SuperTransformerBlock)
-from .sample_utils import mutate_dims, softmax
+from .sample_utils import mutate_dims, softmax, parse_arch
 # from nn_meter.predictor.transformer_predictor import BlockLatencyPredictor
 sys.setrecursionlimit(10000)
 
@@ -93,8 +93,7 @@ class FusedSuperNet(nn.Module):
                 self.bank_flops_ranges = self.bank_flops_ranges+big_bank_choice
             self.flops_bound = self.latency_bound
 
-        if lib_dir is not None:
-            self.offline_archs = self.load_offline_models(lib_dir=lib_dir)
+        self.offline_archs = self.load_offline_models(lib_dir=lib_dir)
 
         self.banks_size = bank_size
         self.big_bank_size = big_bank_size
@@ -156,7 +155,7 @@ class FusedSuperNet(nn.Module):
 
                 feature_exactor.append(SuperCNNLayer(
                     depth=depth[idx]+depths_offset, min_depth=min_depth[idx]+depths_offset, min_channels=self.min_channels[idx], in_channels=in_channels,
-                    out_channels=channels[idx], ratio=conv_ratio, act=act, downsampling=downsampling[idx], res=res, se=se[idx]))  # type: ignore
+                    out_channels=channels[idx], ratio=conv_ratio, act=act, downsampling=downsampling[idx], res=res, se=se[idx]))  
             else:
                 if downsampling[idx]:
                     for i in range(len(res)):
@@ -190,27 +189,31 @@ class FusedSuperNet(nn.Module):
 
     def load_offline_models(self, lib_dir):
         offline_archs = {}
-        if not self.use_latency:
-            for pf in self.bank_flops_ranges:
-                path = f"{lib_dir}/flops_{pf}.pkl"
-                with open(path, "rb") as f:
-                    archs = pickle.load(f)
-                print(f"load offline archs for {pf}M bank, num: {len(archs)}")
-                offline_archs[pf] = archs
-        else:
-            for pf in self.bank_flops_ranges:
-                path = f"{lib_dir}/latency_{pf}.pkl"
-                with open(path, "rb") as f:
-                    archs = pickle.load(f)
-                print(f"load offline archs for {pf}ms bank, num: {len(archs)}")
-                offline_archs[pf] = archs
 
-        min_filename = f"{lib_dir}/min.pkl"
-        with open(min_filename, "rb") as f:
-            archs = pickle.load(f)
-       #     print(archs)
-        print(f"load min archs, num: {len(archs)}")
-        offline_archs['min'] = archs
+        if lib_dir is not None:
+            if not self.use_latency:
+                for pf in self.bank_flops_ranges:
+                    path = f"{lib_dir}/flops_{pf}.pkl"
+                    with open(path, "rb") as f:
+                        archs = pickle.load(f)
+                    print(f"load offline archs for {pf}M bank, num: {len(archs)}")
+                    offline_archs[pf] = archs
+            else:
+                for pf in self.bank_flops_ranges:
+                    path = f"{lib_dir}/latency_{pf}.pkl"
+                    with open(path, "rb") as f:
+                        archs = pickle.load(f)
+                    print(f"load offline archs for {pf}ms bank, num: {len(archs)}")
+                    offline_archs[pf] = archs
+
+            min_filename = f"{lib_dir}/min.pkl"
+            with open(min_filename, "rb") as f:
+                archs = pickle.load(f)
+        #     print(archs)
+            print(f"load min archs, num: {len(archs)}")
+            offline_archs['min'] = archs
+        else:
+            warnings.warn("offline models are not loaded.")
 
         return offline_archs
 
@@ -239,10 +242,9 @@ class FusedSuperNet(nn.Module):
 
         _, anchor_channels, anchor_depths, _, _, _, _, _, _, _ = anchor_arch
         res, channels, depths, conv_ratios, kernel_sizes, mlp_ratio, num_heads, windows_size, qk_scale, v_scale = arch
-        num_conv_stages = self.stage.count('C')
 
-        tmp_channels = channels[:1 + num_conv_stages] + \
-            anchor_channels[1 + num_conv_stages:]
+        tmp_channels = channels[:1 + self.num_conv_stage] + \
+            anchor_channels[1 + self.num_conv_stage:]
 
         self.set_arch(res, tmp_channels, depths, conv_ratios, kernel_sizes,
                       mlp_ratio, num_heads, windows_size, qk_scale, v_scale)
@@ -264,7 +266,7 @@ class FusedSuperNet(nn.Module):
         for stage_index, (anchor_d, d) in enumerate(zip(anchor_depths[1:], depths[1:])):
             reduced_layers = 0
 
-            if stage_index < num_conv_stages:
+            if stage_index < self.num_conv_stage:
                 continue
 
             stage_index += 1
@@ -273,11 +275,11 @@ class FusedSuperNet(nn.Module):
                 reduced_layers = anchor_d - d
                 depths[stage_index] = anchor_d
 
-                if stage_index >= num_conv_stages+1:
+                if stage_index >= self.num_conv_stage+1:
                     num_heads += [channels[stage_index] //
                                   self.head_dims] * depths[stage_index]
                     for _ in range(reduced_layers):
-                        offset = sum(depths[num_conv_stages+1:stage_index])
+                        offset = sum(depths[self.num_conv_stage+1:stage_index])
                         insert_ele([mlp_ratio, windows_size, qk_scale, v_scale], pos=offset, eles=[
                                    mlp_ratio[offset], windows_size[offset], qk_scale[offset], v_scale[offset]])
                 else:
@@ -290,10 +292,10 @@ class FusedSuperNet(nn.Module):
                 added_layers = d - anchor_d
                 depths[stage_index] = anchor_d
 
-                if stage_index >= num_conv_stages+1:
+                if stage_index >= self.num_conv_stage+1:
                     num_heads += [channels[stage_index] //
                                   self.head_dims] * depths[stage_index]
-                    offset = sum(depths[num_conv_stages+1:stage_index])
+                    offset = sum(depths[self.num_conv_stage+1:stage_index])
 
                     for _ in range(added_layers):
                         pop_ele([mlp_ratio, windows_size,
@@ -331,6 +333,7 @@ class FusedSuperNet(nn.Module):
                     new_loss = -self.ce_loss(outputs, labels)
 
                 dist.all_reduce(new_loss, op=dist.ReduceOp.SUM)
+
                 new_loss /= world_size
                 new_loss = new_loss.item()
 
@@ -439,9 +442,6 @@ class FusedSuperNet(nn.Module):
         return arch
 
     def set_arch(self, res, channels, depths, conv_ratio, kr_size, mlp_ratio, num_heads, window_size, qk_scale, v_scale):
-        # inp = 128//8
-        num_conv_stages = self.stage.count('C')
-        num_transformer_stages = len(self.stage) - self.stage.count('C')
         res_idx = self.res_range.index(res)
         self.input_res = res
         self.last_channels = channels[-1]
@@ -478,11 +478,11 @@ class FusedSuperNet(nn.Module):
 
         inp = self.sampled_first_conv_channels
 
-        for idx, module in enumerate(self.feature_exactor):  # type: ignore
-            if idx <= num_conv_stages - 1:
+        for idx, module in enumerate(self.feature_exactor):  
+            if idx <= self.num_conv_stage - 1:
                 module: SuperCNNLayer
                 module.set_conf([0 for _ in range(
-                    depths[idx])], sampled_layers=depths[idx], sampled_channels=channels[idx])  # type: ignore
+                    depths[idx])], sampled_layers=depths[idx], sampled_channels=channels[idx])  
                 sampled_res = module.res[res_idx]
                 module.sampled_res = sampled_res
 
@@ -515,8 +515,8 @@ class FusedSuperNet(nn.Module):
                         break
 
                     transformer_offset = 0
-                    for j in range(idx-num_conv_stages):
-                        transformer_offset += depths[num_conv_stages+j]
+                    for j in range(idx-self.num_conv_stage):
+                        transformer_offset += depths[self.num_conv_stage+j]
 
                     transformer_offset += current_layer_idx//2
 
@@ -561,14 +561,13 @@ class FusedSuperNet(nn.Module):
         feature_exactor_flops = 0
 
         transformer_flops = 0
-        num_conv_stages = self.stage.count('C')
 
         for idx, module in enumerate(self.feature_exactor):
             flops = module.compute_flops()
 
             feature_exactor_flops += flops
 
-            if idx >= num_conv_stages:
+            if idx >= self.num_conv_stage:
                 transformer_flops += flops
 
             if details:
@@ -578,7 +577,7 @@ class FusedSuperNet(nn.Module):
 
         if self.head_type == 'mbv3':
             classifer_flops += (
-                # type: ignore
+                
                 self.last_channels * self.last_channels * self.classifier_mul * (self.feature_exactor[-1].sampled_res*self.feature_exactor[-1].sampled_res) +
                 self.last_channels * self.classifier_mul * self.classifer_head_dim[1] +
                 self.classifer_head_dim[1] * self.num_classes
@@ -598,22 +597,17 @@ class FusedSuperNet(nn.Module):
 
     def set_regularization_mode(self, head_drop_prob=0.2, module_drop_prob=0.2, last_two_stage=True):
         self.head_dropout_prob = head_drop_prob
-        num_conv_stages = self.stage.count('C')
 
-        # type: ignore
         depths = sum(
             [module.sampled_layers for module in self.feature_exactor])
         current_depth = 0
 
-        for idx, module in enumerate(self.feature_exactor):  # type: ignore
+        for idx, module in enumerate(self.feature_exactor): 
             if last_two_stage and idx < len(self.stage) - 2:
-                # type: ignore
                 current_depth += self.feature_exactor[idx].sampled_layers
                 continue
 
-            if idx <= num_conv_stages - 1:
-                module: SuperCNNLayer
-
+            if idx <= self.num_conv_stage - 1:
                 for current_layer_idx, layer in enumerate(module.layers):
                     if current_layer_idx >= module.sampled_layers:
                         break
@@ -623,8 +617,6 @@ class FusedSuperNet(nn.Module):
                     layer[0].drop_connect_prob = module_drop_prob * \
                         float(current_depth) / depths
             else:
-                module: SuperTransformerBlock
-
                 for current_layer_idx, layer in enumerate(module.layers):
                     if current_layer_idx >= module.sampled_layers*2:
                         break
@@ -634,101 +626,6 @@ class FusedSuperNet(nn.Module):
 
                     layer.drop_connect_prob = module_drop_prob * \
                         float(current_depth) / depths
-
-    # convert the layer-wise sampling arch config to block wise
-    def parse_arch(self, arch):
-        num_conv_stages = self.stage.count('C')
-        arch = [list(a) if isinstance(a, tuple) else a for a in arch]
-
-        res, channels, depths, conv_ratios, kernel_sizes, mlp_ratio, num_heads, windows_size, qk_scale, v_scale = arch
-
-        parse_conv_ratio, parse_kernel_size, parse_mlp_ratio, parse_qk_scale, parse_v_scale = [], [], [], [], []
-        for stage_index, d in enumerate(depths[1:]):
-            stage_index += 1
-
-            if stage_index >= num_conv_stages+1:
-                offset = sum(depths[num_conv_stages+1:stage_index])
-
-                parse_mlp_ratio.append(mlp_ratio[offset])
-                parse_qk_scale.append(qk_scale[offset])
-                parse_v_scale.append(v_scale[offset])
-
-            else:
-                offset = sum(depths[:stage_index])
-
-                parse_conv_ratio.append(conv_ratios[offset])
-                parse_kernel_size.append(kernel_sizes[offset])
-
-        return parse_conv_ratio, parse_kernel_size, parse_mlp_ratio, parse_qk_scale, parse_v_scale
-
-    def arch_slicing(self, arch, min_arch, all_dim=False):
-        num_conv_stages = self.stage.count('C')
-        arch = [list(a) if isinstance(a, tuple) else a for a in arch]
-        min_res, min_channels, min_depths, min_conv_ratios, min_kernel_sizes, min_mlp_ratio, _, _, min_qk_scale, min_v_scale = min_arch
-        res, channels, depths, conv_ratios, kernel_sizes, mlp_ratio, num_heads, windows_size, qk_scale, v_scale = arch
-        if res < min_res:
-            res = min_res
-
-        new_res_idx = self.res_range.index(res)
-
-        for stage_index, (min_c, c) in enumerate(zip(min_channels[1:], channels[1:])):
-            if c < min_c:
-                channels[stage_index+1] = min_c
-
-        num_heads, windows_size = [], []
-        for stage_index, (min_d, d) in enumerate(zip(min_depths[1:], depths[1:])):
-            reduced_layers = 0
-            stage_index += 1
-
-            if d < min_d:
-                reduced_layers = min_d - d
-                depths[stage_index] = min_d
-
-            if stage_index >= num_conv_stages+1:
-                offset = sum(depths[num_conv_stages+1:stage_index])
-                min_offset = sum(min_depths[num_conv_stages+1:stage_index])
-
-                windows_size += [self.feature_exactor[stage_index -
-                                                      1].windows_size[new_res_idx][0]] * depths[stage_index]
-                num_heads += [channels[stage_index] //
-                              self.head_dims] * depths[stage_index]
-
-                for _ in range(reduced_layers):
-                    mlp_ratio.insert(offset, mlp_ratio[offset])
-                    qk_scale.insert(offset, qk_scale[offset])
-                    v_scale.insert(offset, v_scale[offset])
-
-                if all_dim:
-                    current_mlp_ratio_val, min_mlp_ratio_val = mlp_ratio[
-                        offset], min_mlp_ratio[min_offset]
-                    current_qk_scale_val, min_qk_scale_val = qk_scale[offset], min_qk_scale[min_offset]
-                    current_v_scale_val, min_v_scale_val = v_scale[offset], min_v_scale[min_offset]
-                    for idx in range(depths[stage_index]):
-                        mlp_ratio[offset +
-                                  idx] = max(current_mlp_ratio_val, min_mlp_ratio_val)
-                        qk_scale[offset +
-                                 idx] = max(current_qk_scale_val, min_qk_scale_val)
-                        v_scale[offset +
-                                idx] = max(current_v_scale_val, min_v_scale_val)
-            else:
-                offset = sum(depths[:stage_index])
-                min_offset = sum(min_depths[:stage_index])
-
-                for _ in range(reduced_layers):
-                    conv_ratios.insert(offset, conv_ratios[offset])
-                    kernel_sizes.insert(offset, kernel_sizes[offset])
-                if all_dim:
-                    current_conv_ratio_val, min_conv_ratio_val = conv_ratios[
-                        offset], min_conv_ratios[min_offset]
-                    current_kernel_size_val, min_kernel_size_val = kernel_sizes[
-                        offset], min_kernel_sizes[min_offset]
-                    for idx in range(depths[stage_index]):
-                        conv_ratios[offset +
-                                    idx] = max(current_conv_ratio_val, min_conv_ratio_val)
-                        kernel_sizes[offset +
-                                     idx] = max(current_kernel_size_val, min_kernel_size_val)
-
-        return res, tuple(channels), tuple(depths), tuple(conv_ratios), tuple(kernel_sizes), tuple(mlp_ratio), tuple(num_heads), tuple(windows_size), tuple(qk_scale), tuple(v_scale)
 
     def select_min_arch(self, flops):
         min_archs = self.offline_archs['min']
@@ -885,8 +782,8 @@ class FusedSuperNet(nn.Module):
             min_res, min_channels, min_depths, min_conv_ratios, min_kernel_sizes, min_mlp_ratio, _, _, min_qk_scale, min_v_scale = min_arch
             res_range = self.res_range[self.res_range.index(min_res):]
             current_min_channels, current_min_depths = min_channels[0], min_depths[0]
-            parse_conv_ratio, parse_kernel_size, parse_mlp_ratio, parse_qk_scale, parse_v_scale = self.parse_arch(
-                arch=min_arch)
+            parse_conv_ratio, parse_kernel_size, parse_mlp_ratio, parse_qk_scale, parse_v_scale = parse_arch(
+                arch=min_arch, num_conv_stages=self.num_conv_stage)
 
         if mode == 'max':
             res = max(self.res_range)
