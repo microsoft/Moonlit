@@ -39,6 +39,15 @@ We use the ImageNet dataset at http://www.image-net.org/. The training set is mo
     ...
 ```
 
+## FLOPs Tables
+To accelerate the sampling process, we sample multiple offline models for each memory bank before supernet training. You can generate the look-up table of one FLOPs by the following code, meanwhile, please remember to provide the multiple smallest subnets. 
+
+```
+python flops_look_up_table/build_look_up_table.py configs/final_3min_space.yaml --flops {FLOPS}
+```
+
+You can download our pre-sampled models from [this link](https://drive.google.com/drive/folders/1FuCGjHLaL6fxYrulXO8S6DHKWx5gbukP). 
+
 ## Supernet Training via Conflict-aware Techniques
 
 Our training techniques, complexity-aware sampling, and performance-aware sampling are controlled by two main fields ```flops_sampling_method``` and ```model_sampling_method``` of our code. We provide the training scripts in configs/final_3min_space.yaml and you can directly run the training process by the following command: 
@@ -49,7 +58,9 @@ python -m torch.distributed.launch --nproc_per_node={GPU_PER_NODE} --node_rank={
 
 You can also customize the search space (e.g., more layers, channels, v scale, etc.) and memory bank by modifying the YAML file. 
 
-# Subnet Evaluation
+**Don't forget to download the offline FLOPs tables (from [this link](https://drive.google.com/drive/folders/1FuCGjHLaL6fxYrulXO8S6DHKWx5gbukP)) and put the pkl files in the ```offline_models``` directory**. 
+
+## Subnet Evaluation
 
 See the configs/final_3min_space_eval.yaml for evaluation with a specific model, please use the same settings (i.e., the search space) as training to construct the model. Please remember to enable the ```eval``` flag and give a specific architecture in ```arch```. 
 Meanwhile, please put the path of supernet checkpoint in the YAML file's ```resume.path```. 
@@ -62,7 +73,7 @@ python -m torch.distributed.launch --nproc_per_node=1 train_eval_supernet.py con
 
 Please note to use a specific model name (e.g., ```elastic_T1```, ```elastic_M```) to replace the placeholder ```MODEL_NAME```. See ```configs/final_3min_space_eval.yaml``` for more details. 
 
-# Subnet Search
+## Subnet Search
 
 After loading the supernet checkpoint, you can also search the model by your constraint. You can run our evolution search by a specific FLOPs constraint with the following command: 
 
@@ -70,14 +81,7 @@ After loading the supernet checkpoint, you can also search the model by your con
 python -m torch.distributed.launch --nproc_per_node={GPU_PER_NODE} search_subnet_via_flops.py configs/final_3min_space.yaml --flops_limits {LIMITS}
 ```
 
-# FLOPs Tables
-To accelerate the sampling process, we sample multiple offline models for each memory bank before supernet training. You can generate the look-up table of one FLOPs by the following code, meanwhile, please remember to provide the multiple smallest subnets. 
-
-```
-python flops_look_up_table/build_look_up_table.py configs/final_3min_space.yaml --flops {FLOPS}
-```
-
-# Citation
+## Citation
 
 If ElasticVit is useful or relevant to your research, please kindly recognize our contributions by citing our paper:
 
