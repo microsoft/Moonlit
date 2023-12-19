@@ -4,10 +4,8 @@ import copy
 import math
 import random
 import sys
-import pickle
 import numpy as np
 import torch
-import warnings
 import torch.distributed as dist
 import torch.nn as nn
 from timm.utils import reduce_tensor
@@ -25,14 +23,9 @@ from .sample_utils import mutate_dims, softmax, parse_arch
 sys.setrecursionlimit(10000)
 
 class FusedSuperNet(nn.Module):
-    def __init__(self, input_size=(3), super_stem_channels=128, num_classes=1000,
-                 stage=['C', 'C', 'C', 'T', 'T', 'T'], depth=[3, 3, 4, 6, 6, 6], conv_ratio=[6, 4], mlp_ratio=[2, 1], num_heads=[4, 6, 8], min_depth=[2, 2, 2, 2, 2, 3],
-                 windows_size=[1, 7, 14], channels=[32, 48, 88, 128, 216, 352], min_channels=[24, 40, 80, 112, 192, 320], qk_scale=[[2.5, 2, 1.5, 1], [2, 1], [1]], v_scale=[[1, 0.6], [1, 0.6], [1]],
-                 head='mbv3', classifer_head_dim=[960, 1280], head_dropout_prob=0.2, pre_norm=False, norm_layer='BN', res_range=[160, 192, 224, 256], downsampling=[True, True, True, False, True, True], act=nn.Hardswish, se=[False, True, True, False, False, False,],
-                 classifier_mul=4, talking_head=[False, False, False, False, False, False, ], dw_downsampling=False, limit_flops=800, min_flops=50, sample_prob=1, head_dims=8, use_res_specific_RPN=False,
-                 bank_step=100, bank_size=150, bank_sampling_rate=0.5, bank_sampling_method='weighted_prob', flops_bound=15, flops_sampling_method='random', model_sampling_method='preference',
-                 use_small_bank=False, small_limit_flops=0, small_min_flops=0, small_step_size=0,
-                 hard_distillation_head=False, lib_dir='./', big_bank_choice=[], big_bank_size=50, max_importance_comparision_num=5, use_latency=False, small_bank_choice=[], latency_bound=1.5
+    def __init__(self, input_size, super_stem_channels, num_classes, stage, depth, conv_ratio, mlp_ratio, num_heads, min_depth,
+                 windows_size, channels, min_channels, qk_scale, v_scale, head, classifer_head_dim, head_dropout_prob, pre_norm, norm_layer, res_range, downsampling, bank_flops_ranges, se, 
+                 act=nn.Hardswish, classifier_mul=4, dw_downsampling=False, sample_prob=1, head_dims=8, use_res_specific_RPN=False, bank_size=150, bank_sampling_rate=0.5, bank_sampling_method='weighted_prob', flops_bound=15, flops_sampling_method='random', model_sampling_method='preference', big_bank_size=50, max_importance_comparision_num=5, use_latency=False, latency_bound=1.5, flops_tables={'min': []}
                  ):
         super().__init__()
         assert head in ['mbv3', 'normal']
@@ -60,8 +53,6 @@ class FusedSuperNet(nn.Module):
         super_stem_depths = [1, 2]
         self.super_stem_channels = super_stem_channels
 
-        # self.conv_stem = conv_stem(super_stem_channels, act=act)
-
         self.first_conv = nn.Conv2d(in_channels=3, out_channels=max(
             self.super_stem_channels), stride=2, kernel_size=3, padding=1, bias=False)
         self.first_conv_bn = BNSuper2d(max(self.super_stem_channels))
@@ -76,39 +67,23 @@ class FusedSuperNet(nn.Module):
         self.flops_bound = flops_bound
         self.use_latency = use_latency
         self.latency_bound = latency_bound
-        self.small_bank_choice = small_bank_choice
-        if not self.use_latency:
-            self.bank_flops_ranges = [c for c in range(
-                min_flops, limit_flops+1, bank_step)]
-            if use_small_bank:
-                small_bank = [c for c in range(
-                    small_min_flops, small_limit_flops+1, small_step_size)]
-                self.bank_flops_ranges = small_bank + self.bank_flops_ranges
 
-            if len(big_bank_choice) > 0:
-                self.bank_flops_ranges = self.bank_flops_ranges + big_bank_choice
-        else:
-            self.bank_flops_ranges = [c for c in self.small_bank_choice]
-            if len(big_bank_choice) > 0:
-                self.bank_flops_ranges = self.bank_flops_ranges+big_bank_choice
-            self.flops_bound = self.latency_bound
-
-        self.offline_archs = self.load_offline_models(lib_dir=lib_dir)
+        self.offline_archs = flops_tables
 
         self.banks_size = bank_size
         self.big_bank_size = big_bank_size
-        self.banks_step = bank_step
         self.banks_prob = bank_sampling_rate
         self.ce_loss = nn.CrossEntropyLoss()
         self.bank_sampling = False
         self.bank_sampling_method = bank_sampling_method
         # self.predictor=BlockLatencyPredictor("pixel6_lut", mode="blockwise")
 
-        self.banks = [[] for bank_flops in self.bank_flops_ranges]
-
-        self.anchor_arch = None
+        self.banks = [[] for bank_flops in bank_flops_ranges]
+        self.bank_flops_ranges = bank_flops_ranges
 
         # anchor model
+        self.anchor_arch = None
+
         self.current_bank_id = 0
 
         res = []
@@ -123,8 +98,6 @@ class FusedSuperNet(nn.Module):
         self.classifer_head_dim = classifer_head_dim
         self.res_range = res_range
 
-        self.hard_distillation_head = hard_distillation_head
-
         self.head_dropout_prob = head_dropout_prob
 
         self.input_res = -1
@@ -136,15 +109,13 @@ class FusedSuperNet(nn.Module):
 
         self.classifier_mul = classifier_mul
 
-        channel_scaling_factor = 1.
-        depths_offset = 0
-
         self.windows_size = []
         num_C = self.stage.count('C')
         self.num_conv_stage = num_C
 
         DISABLE_SWIN = 1
 
+        depths_offset = 0
         for idx, s in enumerate(stage):
             out_channels = channels[idx]
 
@@ -171,7 +142,7 @@ class FusedSuperNet(nn.Module):
                                                                    num_C], windows_size=_windows_size, act=act,
                     mlp_ratio=mlp_ratio, pre_norm=pre_norm, qk_scale=qk_scale[idx-num_C], v_scale=v_scale[idx -
                                                                                                           num_C], downsampling=downsampling[idx], use_res_specific_RPN=use_res_specific_RPN,
-                    norm_layer=BNSuper1d if norm_layer == 'BN' else LNSuper, talking_head=talking_head[idx], dw_downsampling=dw_downsampling, head_dims=head_dims))
+                    norm_layer=BNSuper1d if norm_layer == 'BN' else LNSuper, talking_head=False, dw_downsampling=dw_downsampling, head_dims=head_dims))
 
             in_channels = out_channels
         self.feature_exactor = nn.ModuleList(feature_exactor)
@@ -186,36 +157,6 @@ class FusedSuperNet(nn.Module):
             channels[-1] * classifier_mul, classifer_head_dim[1])
 
         self.classifer = nn.Linear(classifer_head_dim[1], num_classes)
-
-    def load_offline_models(self, lib_dir):
-        offline_archs = {}
-
-        if lib_dir is not None:
-            if not self.use_latency:
-                for pf in self.bank_flops_ranges:
-                    path = f"{lib_dir}/flops_{pf}.pkl"
-                    with open(path, "rb") as f:
-                        archs = pickle.load(f)
-                    print(f"load offline archs for {pf}M bank, num: {len(archs)}")
-                    offline_archs[pf] = archs
-            else:
-                for pf in self.bank_flops_ranges:
-                    path = f"{lib_dir}/latency_{pf}.pkl"
-                    with open(path, "rb") as f:
-                        archs = pickle.load(f)
-                    print(f"load offline archs for {pf}ms bank, num: {len(archs)}")
-                    offline_archs[pf] = archs
-
-            min_filename = f"{lib_dir}/min.pkl"
-            with open(min_filename, "rb") as f:
-                archs = pickle.load(f)
-        #     print(archs)
-            print(f"load min archs, num: {len(archs)}")
-            offline_archs['min'] = archs
-        else:
-            warnings.warn("offline models are not loaded.")
-
-        return offline_archs
 
     def set_min_arch(self, arch):
         arch = tuple([tuple(a) if isinstance(a, list) else a for a in arch])

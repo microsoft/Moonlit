@@ -6,8 +6,9 @@ name: elasticvit_eval
 gpu: tesla_v100
 
 # Name of output directory. Checkpoints and logs will be saved at `pwd`/output_dir
-output_dir: /path_to_output_dir/model_eval/
-offline_models_dir: EdgeDL/offline_models
+output_dir: /path_to_output_dir/supernet_training/
+lib_dir: ./
+offline_models_dir: offline_models/
 training_device: gpu
 
 # Dataset loader
@@ -67,7 +68,6 @@ pre_norm: True # false for BN, true for LN
 search_space:
   res: [128, 160, 176, 192, 224, 256, ]
   downsampling: [True, True, True, False, True, True]
-  talking_head: [False, False, False, False, False, False]
   se: [False, True, True, False, False, False]
   classifier_mul: 6
   dw_downsampling: True
