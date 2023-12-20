@@ -6,7 +6,7 @@ tqdm==4.65.0
 sentencepiece==0.1.97
 icetk==0.0.4 # ChatGLM
 cpm_kernels==1.0.11  # ChatGLM
-transformers==4.29.0
+transformers==4.36.0
 datasets==2.10.1
 bitsandbytes==0.37.2  # Load 8bit
 accelerate==0.17.1  # Load 8bit
