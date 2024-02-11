@@ -12,7 +12,7 @@ flit_core==3.6.0
 fonttools==4.43.0
 fsspec==2023.6.0
 fvcore==0.1.5.post20221221
-grpcio==1.53.0
+grpcio==1.53.2
 huggingface-hub==0.16.4
 idna==3.4
 importlib-metadata==4.11.3
