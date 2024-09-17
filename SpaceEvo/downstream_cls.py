@@ -19,10 +19,6 @@ from modules.training.dataset.transform import get_data_transform
 import modules.alphanet_training.utils.loss_ops as loss_ops 
 from modules.alphanet_training.utils.progress import AverageMeter, ProgressMeter, accuracy
 
-# import wandb
-# wandb.login(key="b1634222b85eb1957c717d8810aac9d485e5a538")
-# wandb.init(project="attentive-nas", name="fine-grained cls")
-
 
 FILE_DIR = os.path.dirname(__file__)
 DATASET_DOWNLOAD_DIR = os.path.join(FILE_DIR, 'datasets')
