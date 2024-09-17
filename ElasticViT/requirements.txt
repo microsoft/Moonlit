@@ -64,4 +64,4 @@ wcwidth==0.2.6
 Werkzeug==3.0.1
 wheel==0.38.1
 yacs==0.1.8
-zipp==3.11.0
+zipp==3.19.1
